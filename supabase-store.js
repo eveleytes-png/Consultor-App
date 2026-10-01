@@ -1,7 +1,7 @@
 (function(root){
   const sections=['activities','links','actions','assignments','equipment'];
   class SupabaseStore {
-    constructor(config, request=fetch){this.config=config;this.request=request;this.revision=null;this.loading=false;}
+    constructor(config, request=(...args)=>globalThis.fetch(...args)){this.config=config;this.request=request;this.revision=null;this.loading=false;}
     async call(path,options={}){
       const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
       try{
