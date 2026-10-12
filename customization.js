@@ -40,7 +40,15 @@ mapLibrary().then(L=>{
  L.control.layers(layers,null,{collapsed:false,position:'topright'}).addTo(map);
  map.on('baselayerchange',e=>{mapBaseLayer=e.name;status.hidden=true;});
  status.hidden=true;
- function selectSeller(s){map.closePopup();mapSelected=s.id;card.innerHTML=liveSellerCard(s);card.scrollIntoView({block:'nearest',behavior:'smooth'});}
+ function closeSellerCard(){mapSelected=null;card.replaceChildren();}
+ function paintSellerCard(s){
+  card.innerHTML=liveSellerCard(s);
+  const close=document.createElement('button');close.type='button';close.className='map-card-close';close.setAttribute('aria-label','Cerrar ficha del comercio');close.textContent='×';
+  close.onclick=e=>{e.stopPropagation();closeSellerCard();};card.querySelector('.seller').append(close);
+ }
+ // Leaflet converts mouse clicks and touch taps into this event. Controls and markers are excluded.
+ map.on('click',e=>{if(e.originalEvent?.target?.closest?.('.leaflet-marker-icon,.leaflet-control,.leaflet-popup'))return;closeSellerCard();});
+ function selectSeller(s){map.closePopup();mapSelected=s.id;paintSellerCard(s);card.scrollIntoView({block:'nearest',behavior:'smooth'});}
  for(const s of located){
   const marker=L.marker(parseLatLog(s.latlog),{title:s.n,alt:'Ubicación de '+s.n,icon:L.divIcon({className:'seller-map-marker',html:`<span style="background:${sellerColor(s)}"></span>`,iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map);
   marker.on('click',e=>{
@@ -54,6 +62,6 @@ mapLibrary().then(L=>{
    L.popup({maxWidth:270}).setLatLng(marker.getLatLng()).setContent(list).openOn(map);
   });
  }
- const selected=located.find(s=>s.id===mapSelected);if(selected)card.innerHTML=liveSellerCard(selected);
+ const selected=located.find(s=>s.id===mapSelected);if(selected)paintSellerCard(selected);
  map.fitBounds(located.map(s=>parseLatLog(s.latlog)),{padding:[35,60],maxZoom:15});
 }).catch(e=>{if(host.isConnected)status.textContent=e.message;});};
