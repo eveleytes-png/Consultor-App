@@ -1,0 +1,7 @@
+{
+  "name": "consultor-app",
+  "private": true,
+  "dependencies": {
+    "google-auth-library": "10.9.0"
+  }
+}
