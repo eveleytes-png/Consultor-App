@@ -4,7 +4,7 @@ const STOCK_HEADERS=['ID','Tipo de equipo','Número de serie','Estado','Fecha de
 const LINK_HEADERS=['ID','Link','Comentario','Texto para copiar','Favorito'];
 const POINTS_TITLE='PointsConsultoresApp',LINKS_TITLE='LinksConsultoresApp';
 class SheetsGateway{
- constructor({request=fetch,token=()=>'',fileId,portfolioId=null,stockId=null,linksId=null}){this.request=request;this.token=token;this.fileId=fileId;this.portfolioId=portfolioId;this.stockId=stockId;this.linksId=linksId;this.controller=new AbortController();}
+ constructor({request=(...args)=>globalThis.fetch(...args),token=()=>'',fileId,portfolioId=null,stockId=null,linksId=null}){this.request=request;this.token=token;this.fileId=fileId;this.portfolioId=portfolioId;this.stockId=stockId;this.linksId=linksId;this.controller=new AbortController();}
  assert(fileId,sheetId){if(fileId!==this.fileId||!Number.isInteger(sheetId)||![this.portfolioId,this.stockId,this.linksId].includes(sheetId))throw Error('Acceso fuera del archivo o las pestañas autorizadas por la app.');}
  async api(path,body){if(this.controller.signal.aborted)throw Error('Conexión detenida.');if(!this.token())throw Error('Reconectá con Google para continuar.');const r=await this.request('https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(this.fileId)+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+this.token(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:this.controller.signal});const data=await r.json();if(!r.ok)throw Error(r.status===401?'La sesión de Google venció. Reconectá desde el perfil.':data.error?.message||'Google no pudo completar la operación.');return data;}
  metadata(){return this.api('?fields=spreadsheetId,properties(title),sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)))');}
@@ -45,3 +45,4 @@ class SheetsGateway{
 root.SheetsGateway=SheetsGateway;root.STOCK_HEADERS=STOCK_HEADERS;root.LINK_HEADERS=LINK_HEADERS;
 if(typeof module!=='undefined')module.exports={SheetsGateway,STOCK_HEADERS,LINK_HEADERS};
 })(typeof window==='undefined'?globalThis:window);
+
