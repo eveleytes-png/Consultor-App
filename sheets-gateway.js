@@ -30,6 +30,16 @@ class SheetsGateway{
  }
  ensureStock(){return this.ensureTab('stock');}
  ensureLinks(){return this.ensureTab('links');}
+ async selectExisting(kind,title){
+ const meta=await this.metadata(),tab=meta.sheets.find(s=>s.properties.title===title)?.properties;
+ if(!tab)throw Error('No se encuentra la pestaña '+title+'. No se creó ni modificó ninguna pestaña.');
+ const key=kind==='stock'?'stockId':'linksId',other=kind==='stock'?'linksId':'stockId';
+ if(tab.sheetId===this.portfolioId||tab.sheetId===this[other])throw Error('Las tres pestañas deben ser diferentes.');
+ this[key]=tab.sheetId;
+ const rows=await this.read(this.fileId,tab.sheetId),headers=kind==='stock'?STOCK_HEADERS:LINK_HEADERS;
+ if(rows.length&&headers.some((h,i)=>rows[0]?.[i]!==h))throw Error('Los encabezados de '+title+' no son compatibles. No se modificaron sus datos.');
+ return tab.sheetId;
+ }
  stop(){this.controller.abort();}
 }
 root.SheetsGateway=SheetsGateway;root.STOCK_HEADERS=STOCK_HEADERS;root.LINK_HEADERS=LINK_HEADERS;
