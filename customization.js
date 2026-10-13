@@ -2,6 +2,7 @@
 const portfolioHeaders=window.CONSULTOR_DEMO_DATA?.headers||[];
 function columnLetter(i){let s='';for(i++;i;i=Math.floor((i-1)/26))s=String.fromCharCode(65+(i-1)%26)+s;return s;}
 const portfolioColumns=portfolioHeaders.map((label,i)=>({key:'c'+i,index:i,label:label||'Columna '+columnLetter(i),letter:columnLetter(i)}));
+window.setPortfolioHeaders=function(headers){portfolioHeaders.splice(0,portfolioHeaders.length,...headers);portfolioColumns.splice(0,portfolioColumns.length,...headers.map((label,i)=>({key:'c'+i,index:i,label:label||'Columna '+columnLetter(i),letter:columnLetter(i)})));};
 const legacyColumn={n:1,e:0,z:2,s:3,latlog:4,whatsapp:6,id:15,nombre:16,apellido:17,telefono1:19,survey:35,d:36,accept:49,blindaje:55};
 let consultantSettings={};
 window.getConsultorSettings=()=>consultantSettings;
