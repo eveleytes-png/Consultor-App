@@ -40,7 +40,7 @@ export function createHandler({env=process.env,verifyIdentity=defaultIdentity,go
  res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');
  const send=(status,value)=>res.status(status).json(value),c=config(env);
  try{
-  if(req.method==='GET'){return send(200,{configured:configured(c),authenticated:configured(c)&&!!session(req.headers.cookie,c),clientId:c.client});}
+  if(req.method==='GET'){return send(200,{configured:configured(c),authenticated:configured(c)&&!!session(req.headers.cookie,c),clientId:c.client,sellerWritesEnabled:env.GOOGLE_SELLER_WRITES_ENABLED==='true'});}
   if(req.method!=='POST'){res.setHeader('Allow','GET, POST');return send(405,{error:'Método no permitido.'});}
   if(!configured(c))return send(503,{error:'Falta configurar la conexión compartida en Vercel.'});
   if(req.headers.origin!==c.origin)throw fail('Origen no autorizado.',403);
@@ -54,6 +54,7 @@ export function createHandler({env=process.env,verifyIdentity=defaultIdentity,go
   if(!session(req.headers.cookie,c))throw fail('Ingresá con tu cuenta de Google para consultar la planilla.',401);
   if(body.operation==='logout'){res.setHeader('Set-Cookie',`${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);return send(200,{authenticated:false});}
   if(body.operation==='editSeller'){
+   if(env.GOOGLE_SELLER_WRITES_ENABLED!=='true')throw fail('El guardado en BaseApp todavía está pendiente de verificación. No se modificó la planilla.',503);
    const {sellerId,column,value,expected,header}=body;
    if(Object.keys(body).some(k=>!['operation','sellerId','column','value','expected','header'].includes(k))||typeof sellerId!=='string'||!sellerId||sellerId.length>200||!Number.isInteger(column)||column<0||column>14||typeof value!=='string'||value.length>10000||typeof expected!=='string'||typeof header!=='string')throw fail('Solo se editan celdas de A a O.');
    const owner=randomUUID();if(!await lock('acquire',owner))throw fail('Otro guardado está en curso o pendiente de confirmar. Actualizá antes de reintentar.',409);
@@ -79,7 +80,7 @@ export function createHandler({env=process.env,verifyIdentity=defaultIdentity,go
    if(Object.keys(body).some(k=>!['operation','fresh'].includes(k))||(body.fresh!==undefined&&typeof body.fresh!=='boolean'))throw fail('Solicitud inválida.');
    if(!body.fresh&&snapshot&&Date.now()-snapshotAt<4000)return send(200,snapshot);
    if(body.fresh||!snapshotPending){const version=generation;const pending=googleRequest(c,'/values:batchGetByDataFilter',{dataFilters:Object.keys(TABS).map(id=>({gridRange:{sheetId:Number(id),startRowIndex:0}})),majorDimension:'ROWS',valueRenderOption:'FORMATTED_VALUE'},'read').then(data=>{
-    const result={};for(const [id,key] of [[0,'portfolio'],[500157585,'stock'],[1266882678,'links']]){const range=data.valueRanges?.find(r=>r.dataFilters?.some(f=>f.gridRange?.sheetId===id));if(!range)throw fail('Google no devolvió todas las pestañas configuradas.',502);result[key]=range.valueRange?.values||[];}
+    const result={};for(const [id,key] of [[0,'portfolio'],[500157585,'stock'],[1266882678,'links']]){const range=data.valueRanges?.find(r=>r.dataFilters?.some(f=>f.gridRange&&(f.gridRange.sheetId??0)===id));if(!range)throw fail('Google no devolvió todas las pestañas configuradas.',502);result[key]=range.valueRange?.values||[];}
     if(version===generation){snapshot=result;snapshotAt=Date.now();}return result;
    });snapshotPending=pending;pending.finally(()=>{if(snapshotPending===pending)snapshotPending=null;}).catch(()=>{});}
    return send(200,await snapshotPending);
