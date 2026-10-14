@@ -19,7 +19,7 @@ function opDialog(title,body,wide=false){
 }
 function confirmDelete(message,commit){const d=opDialog('Confirmar eliminación',`<p>${opEscape(message)}</p><div class="form-footer"><button type="button" class="secondary" data-modal-close>Cancelar</button><button type="button" class="danger" data-confirm-delete>Eliminar</button></div>`);d.querySelector('[data-confirm-delete]').addEventListener('click',()=>{d.close();commit();});d.querySelector('[data-modal-close].secondary').focus();}
 function savePrototype(){try{sessionStorage.setItem('consultor-operations-v1',JSON.stringify({actions:actionRegistry,assignments:liveAssignments,equipment:liveEquipment,columns:actionColumns}));return true;}catch{return false;}}
-function syncSellerActions(){for(const s of sellers)s.a=liveAssignments.filter(a=>opNorm(a.email)===opNorm(s.e)).map(a=>[a.action,a.color,a.actionId]).filter((a,i,all)=>all.findIndex(b=>(b[2]&&a[2]?b[2]===a[2]:b[0]===a[0]&&b[1]===a[1]))===i);}
+function syncSellerActions(){for(const a of liveAssignments){const s=sellers.find(s=>a.sellerId?String(s.id)===String(a.sellerId):opNorm(a.email)===opNorm(s.e));if(s){a.sellerId=s.id;a.email=s.e;}}for(const s of sellers)s.a=liveAssignments.filter(a=>a.sellerId?String(a.sellerId)===String(s.id):opNorm(a.email)===opNorm(s.e)).map(a=>[a.action,a.color,a.actionId]).filter((a,i,all)=>all.findIndex(b=>(b[2]&&a[2]?b[2]===a[2]:b[0]===a[0]&&b[1]===a[1]))===i);}
 function initOperations(){
   actionRegistry=assignments.map(r=>({name:r[0],color:r[1]})).filter((a,i,all)=>all.findIndex(b=>b.name===a.name)===i);
   liveAssignments=assignments.map((r,i)=>({id:`assignment-${i}`,action:r[0],color:r[1],email:r[3],commerce:r[2],locality:r[4],contact:r[5],phone:r[6],category:r[7],days:r[8]}));
