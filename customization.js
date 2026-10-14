@@ -30,6 +30,13 @@ profileConfiguration=function(){const main=document.querySelector('main');main.i
 const mapTilerKey='KYoipt2HoFR1VlH9eqkJ';
 let geographicMap=null,mapLibraryPromise=null,mapBaseLayer="Mapa",mapViewport=null;
 const expandedMapSellers=new Set();
+// Use the whole filtered business zone, never just the closest screen-space points.
+function sellerMapZone(s,rows){
+ const normalize=v=>String(v??'').trim().toLocaleLowerCase('es-AR'),zone=normalize(s.z),subzone=normalize(s.s);
+ if(zone||subzone)return rows.filter(other=>(!zone||normalize(other.z)===zone)&&(!subzone||normalize(other.s)===subzone));
+ const origin=parseLatLog(s.latlog),radians=n=>n*Math.PI/180;
+ return rows.filter(other=>{const point=parseLatLog(other.latlog),lat=radians(point[0]-origin[0]),lng=radians(point[1]-origin[1]);const a=Math.sin(lat/2)**2+Math.cos(radians(origin[0]))*Math.cos(radians(point[0]))*Math.sin(lng/2)**2;return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(Math.max(0,1-a)))<=1.5;});
+}
 function resetMapViewport(){mapViewport=null;expandedMapSellers.clear();}
 window.addEventListener('popstate',resetMapViewport);
 document.addEventListener('click',e=>{const a=e.target.closest('a[href]');if(a){const url=new URL(a.href,location.href);if(url.origin===location.origin&&url.pathname===location.pathname&&a.target!=='_blank')resetMapViewport();}},true);
@@ -59,14 +66,17 @@ mapLibrary().then(L=>{
  }
  // Leaflet converts mouse clicks and touch taps into this event. Controls and markers are excluded.
  map.on('click',e=>{if(e.originalEvent?.target?.closest?.('.leaflet-marker-icon,.leaflet-control,.leaflet-popup'))return;closeSellerCard();});
- function selectSeller(s){map.closePopup();mapSelected=s.id;paintSellerCard(s);map.setView(parseLatLog(s.latlog),Math.max(map.getZoom(),16));}
+ function selectSeller(s){map.closePopup();mapSelected=s.id;paintSellerCard(s);}
  for(const s of located){
-  const marker=L.marker(parseLatLog(s.latlog),{title:s.n,alt:'Ubicación de '+s.n,icon:L.divIcon({className:'seller-map-marker',html:`<span style="background:${sellerColor(s)}"></span>`,iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map);
+  const marker=L.marker(parseLatLog(s.latlog),{title:s.n,alt:'Ubicación de '+s.n,icon:L.divIcon({className:'seller-map-marker',html:`<span style="background:${sellerColor(s)}"></span>`,iconSize:[20,20],iconAnchor:[10,10]})}).addTo(map);
   marker.on('click',e=>{
    const center=map.latLngToContainerPoint(marker.getLatLng());
    const nearby=located.filter(other=>map.latLngToContainerPoint(parseLatLog(other.latlog)).distanceTo(center)<24);
-   if(nearby.length>1&&!expandedMapSellers.has(s.id)&&map.getZoom()<map.getMaxZoom()){nearby.forEach(seller=>expandedMapSellers.add(seller.id));closeSellerCard();const distances=nearby.map(other=>map.latLngToContainerPoint(parseLatLog(other.latlog)).distanceTo(center)).filter(d=>d>0);const separation=distances.length?Math.min(...distances):1;const target=Math.max(16,map.getZoom()+Math.max(2,Math.ceil(Math.log2(32/separation))));map.setView(marker.getLatLng(),Math.min(map.getMaxZoom(),target));return;}
-   selectSeller(s);
+   if(nearby.length>1&&!expandedMapSellers.has(s.id)){const zone=sellerMapZone(s,located);zone.forEach(seller=>expandedMapSellers.add(seller.id));closeSellerCard();map.fitBounds(zone.map(seller=>parseLatLog(seller.latlog)),{paddingTopLeft:[48,48],paddingBottomRight:[64,80],maxZoom:15});return;}
+   // Identical coordinates cannot separate with zoom. Repeated taps cycle those sellers.
+   const point=parseLatLog(s.latlog),coincident=located.filter(other=>{const p=parseLatLog(other.latlog);return Math.abs(p[0]-point[0])<1e-7&&Math.abs(p[1]-point[1])<1e-7;});
+   const previous=coincident.findIndex(other=>other.id===mapSelected);
+   selectSeller(coincident.length>1?coincident[(previous+1)%coincident.length]:s);
   });
  }
  const selected=located.find(s=>s.id===mapSelected);if(selected)paintSellerCard(selected);
