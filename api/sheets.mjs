@@ -9,6 +9,7 @@ const META='?fields=spreadsheetId,properties(title),sheets(properties(sheetId,ti
 const googleClients=new Map();
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
 const b64=value=>Buffer.from(value).toString('base64url');
+export function sellerCellValue(column,value){return column>=7&&value.startsWith('=')?{formulaValue:value}:{stringValue:value};}
 function config(env){return {email:env.GOOGLE_SERVICE_ACCOUNT_EMAIL,key:env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g,'\n'),secret:env.AUTH_SECRET,client:env.AUTH_GOOGLE_ID||CLIENT,origin:env.APP_ORIGIN||'https://consultor-app.vercel.app',allowed:(env.AUTH_ALLOWED_EMAILS||'eveleytes@gmail.com').split(',').map(v=>v.trim().toLowerCase()).filter(Boolean)};}
 function configured(c){return !!(c.email&&c.key&&c.secret?.length>=32&&c.allowed.length);}
 function session(cookie,c){try{const raw=(cookie||'').split(';').map(v=>v.trim()).find(v=>v.startsWith(COOKIE+'='))?.slice(COOKIE.length+1);if(!raw)return null;const parts=raw.split('.');if(parts.length!==2)return null;const signature=createHmac('sha256',c.secret).update(parts[0]).digest(),supplied=Buffer.from(parts[1],'base64url');if(signature.length!==supplied.length||!timingSafeEqual(signature,supplied))return null;const value=JSON.parse(Buffer.from(parts[0],'base64url'));return value.exp>Date.now()/1000&&c.allowed.includes(value.email)?value:null;}catch{return null;}}
@@ -36,7 +37,10 @@ function authorizeOperation(path,body){
 }
 async function defaultIdentity(credential,client){const {OAuth2Client}=await import('google-auth-library');const ticket=await new OAuth2Client(client).verifyIdToken({idToken:credential,audience:client});return ticket.getPayload();}
 async function defaultGoogle(c,path,body,mode){const {JWT}=await import('google-auth-library');const key=c.email+':'+mode;let auth=googleClients.get(key);if(!auth){auth=new JWT({email:c.email,key:c.key,scopes:['https://www.googleapis.com/auth/spreadsheets']});googleClients.set(key,auth);}const result=await auth.request({url:'https://sheets.googleapis.com/v4/spreadsheets/'+FILE+path,method:body?'POST':'GET',data:body,timeout:15000});return result.data;}
-export function createHandler({env=process.env,verifyIdentity=defaultIdentity,googleRequest=defaultGoogle,lock=sheetLock}={}){let snapshot=null,snapshotAt=0,snapshotPending=null,generation=0;return async(req,res)=>{
+export function createHandler({env=process.env,verifyIdentity=defaultIdentity,googleRequest=defaultGoogle,lock=sheetLock}={}){let snapshot=null,snapshotAt=0,snapshotPending=null,generation=0;
+const readValues=async(c,range,render='FORMATTED_VALUE')=>{const data=await googleRequest(c,'/values:batchGetByDataFilter',{dataFilters:[{gridRange:range}],majorDimension:'ROWS',valueRenderOption:render},'read');return data.valueRanges?.[0]?.valueRange?.values||[];};
+const rawCell=async(c,row,column)=>String((await readValues(c,{sheetId:0,startRowIndex:row,endRowIndex:row+1,startColumnIndex:column,endColumnIndex:column+1},'FORMULA'))[0]?.[0]??'');
+return async(req,res)=>{
  res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');
  const send=(status,value)=>res.status(status).json(value),c=config(env);
  try{
@@ -53,6 +57,12 @@ export function createHandler({env=process.env,verifyIdentity=defaultIdentity,go
   }
   if(!session(req.headers.cookie,c))throw fail('Ingresá con tu cuenta de Google para consultar la planilla.',401);
   if(body.operation==='logout'){res.setHeader('Set-Cookie',`${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);return send(200,{authenticated:false});}
+  if(body.operation==='sellerCell'){
+   if(Object.keys(body).some(k=>!['operation','sellerId','column'].includes(k))||typeof body.sellerId!=='string'||!body.sellerId||body.sellerId.length>200||!Number.isInteger(body.column)||body.column<0||body.column>14)throw fail('Solo se editan celdas de A a O.');
+   const rows=await readValues(c,{sheetId:0,startRowIndex:0});const matches=rows.map((row,index)=>({row,index})).filter(r=>r.index>0&&String(r.row[15]??'')===body.sellerId);
+   if(matches.length!==1)throw fail('No se encuentra un comercio único con ese ID.',409);
+   return send(200,{value:await rawCell(c,matches[0].index,body.column),header:String(rows[0]?.[body.column]??'')});
+  }
   if(body.operation==='editSeller'){
    if(env.GOOGLE_SELLER_WRITES_ENABLED!=='true')throw fail('El guardado en BaseApp todavía está pendiente de verificación. No se modificó la planilla.',503);
    const {sellerId,column,value,expected,header}=body;
@@ -60,19 +70,19 @@ export function createHandler({env=process.env,verifyIdentity=defaultIdentity,go
    const owner=randomUUID();if(!await lock('acquire',owner))throw fail('Otro guardado está en curso o pendiente de confirmar. Actualizá antes de reintentar.',409);
    let writing=false,confirmed=false;
    try{
-    const read=async()=>{const data=await googleRequest(c,'/values:batchGetByDataFilter',{dataFilters:[{gridRange:{sheetId:0,startRowIndex:0}}],majorDimension:'ROWS',valueRenderOption:'FORMATTED_VALUE'},'read');return data.valueRanges?.[0]?.valueRange?.values||[];};
+    const read=()=>readValues(c,{sheetId:0,startRowIndex:0});
     const rows=await read();const idColumn=rows[0]?.findIndex(h=>String(h).trim().toLowerCase()==='cust_id comercio');
     if(idColumn!==15||String(rows[0]?.[column]??'')!==header)throw fail('Cambió la estructura de BaseApp. Actualizá antes de guardar.',409);
     const matches=rows.map((row,index)=>({row,index})).filter(r=>r.index>0&&String(r.row[idColumn]??'')===sellerId);
     if(matches.length!==1)throw fail('No se encuentra un comercio único con ese ID.',409);
-    const {row,index}=matches[0];if(String(row[column]??'')!==expected)throw fail('Este dato cambió en Sheets u otro dispositivo. Cerrá la edición y revisá el valor actualizado.',409);
+    const {row,index}=matches[0];if(await rawCell(c,index,column)!==expected)throw fail('Este dato cambió en Sheets u otro dispositivo. Cerrá la edición y revisá el valor actualizado.',409);
     if(column===0&&(!value.trim()||rows.some((r,i)=>i>0&&i!==index&&String(r[0]??'').trim().toLowerCase()===value.trim().toLowerCase())))throw fail('El mail es obligatorio y no puede repetirse.');
     if(value===expected){confirmed=true;return send(200,{saved:true});}
     if(!await lock('mark',owner))throw fail('Venció la protección del guardado. No se modificó la planilla.',409);writing=true;
     generation++;snapshot=null;snapshotAt=0;snapshotPending=null;
-    try{await googleRequest(c,':batchUpdate',{requests:[{updateCells:{range:{sheetId:0,startRowIndex:index,endRowIndex:index+1,startColumnIndex:column,endColumnIndex:column+1},rows:[{values:[{userEnteredValue:{stringValue:value}}]}],fields:'userEnteredValue'}}]},'write');}
+    try{await googleRequest(c,':batchUpdate',{requests:[{updateCells:{range:{sheetId:0,startRowIndex:index,endRowIndex:index+1,startColumnIndex:column,endColumnIndex:column+1},rows:[{values:[{userEnteredValue:sellerCellValue(column,value)}]}],fields:'userEnteredValue'}}]},'write');}
     catch(error){if([400,401,403,404].includes(error.response?.status))confirmed=true;throw fail('No se pudo confirmar el guardado en Google. Revisá BaseApp antes de volver a guardar.',502);}
-    const after=await read();if(String(after[index]?.[15]??'')!==sellerId||String(after[index]?.[column]??'')!==value)throw fail('Google recibió el cambio, pero el dato volvió a cambiar. Revisá BaseApp antes de reintentar.',409);
+    const after=await read();if((column!==0&&String(after[index]?.[15]??'')!==sellerId)||await rawCell(c,index,column)!==value)throw fail('Google recibió el cambio, pero el dato volvió a cambiar. Revisá BaseApp antes de reintentar.',409);
     confirmed=true;return send(200,{saved:true});
    }finally{if(!writing||confirmed){if(!await lock('release',owner))throw fail('El dato se guardó, pero no se pudo cerrar la protección. Revisá antes de reintentar.',503);}}
   }
