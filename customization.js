@@ -40,20 +40,34 @@ function sellerMapZone(s,rows){
 function resetMapViewport(){mapViewport=null;expandedMapSellers.clear();}
 window.addEventListener('popstate',resetMapViewport);
 document.addEventListener('click',e=>{const a=e.target.closest('a[href]');if(a){const url=new URL(a.href,location.href);if(url.origin===location.origin&&url.pathname===location.pathname&&a.target!=='_blank')resetMapViewport();}},true);
-function mapLibrary(){if(window.L)return Promise.resolve(window.L);if(mapLibraryPromise)return mapLibraryPromise;mapLibraryPromise=new Promise((resolve,reject)=>{const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.integrity='sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';css.crossOrigin='';document.head.append(css);const js=document.createElement('script');js.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';js.integrity='sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';js.crossOrigin='';js.onload=()=>resolve(window.L);js.onerror=()=>{mapLibraryPromise=null;js.remove();reject(Error('No se pudo cargar el mapa. Revisá tu conexión e intentá nuevamente.'));};document.head.append(js);});return mapLibraryPromise;}
+function mapLibrary(){
+ if(window.L?.maplibreGL)return Promise.resolve(window.L);
+ if(mapLibraryPromise)return mapLibraryPromise;
+ mapLibraryPromise=(async()=>{
+  const css=(href,integrity)=>{if(document.querySelector(`link[href="${href}"]`))return;const node=document.createElement('link');node.rel='stylesheet';node.href=href;if(integrity){node.integrity=integrity;node.crossOrigin='';}document.head.append(node);};
+  const script=(src,integrity)=>new Promise((resolve,reject)=>{const node=document.createElement('script');node.src=src;if(integrity){node.integrity=integrity;node.crossOrigin='';}node.onload=resolve;node.onerror=()=>{node.remove();reject(Error('No se pudo cargar el mapa. Revisá tu conexión e intentá nuevamente.'));};document.head.append(node);});
+  if(!window.L){css('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=');await script('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js','sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=');}
+  css('https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css');
+  if(!window.maplibregl)await script('https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js');
+  if(!window.L.maplibreGL)await script('https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js');
+  return window.L;
+ })().catch(error=>{mapLibraryPromise=null;throw error;});
+ return mapLibraryPromise;
+}
 const renderSellerList=renderSellerResults;
 renderSellerResults=function(){geographicMap?.remove();geographicMap=null;if(sellerView!=='map'){resetMapViewport();renderSellerList();return;}const root=document.querySelector('#seller-results');if(!root)return;const rows=filteredSellers(),located=rows.filter(s=>parseLatLog(s.latlog)),missing=rows.filter(s=>!parseLatLog(s.latlog));const filter=document.querySelector('[data-op="seller-filters"]');if(filter)filter.innerHTML=icon('filter')+'Filtros'+(filterCount()?' ('+filterCount()+')':'');root.innerHTML=`<p class="count">${rows.length} comercios encontrados</p><div class="toolbar"><span>Con ubicación: ${located.length}</span><span title="Estos comercios no tienen coordenadas y se ven en Listado">Sin ubicación: ${missing.length}</span></div><div class="legend"><span style="--dot:#292932">Sin aceptación</span><span style="--dot:#288450">Encuesta válida</span><span style="--dot:#cf5058">Sin encuesta válida</span><span style="--dot:#8c8c9c">Sin dato</span></div><p class="map-hint">Tocá un punto para ver el comercio. Si están juntos, el primer toque acerca la zona.</p><div class="geographic-wrapper"><div class="geographic-map" aria-label="Mapa de comercios"></div><div class="map-selected-card"></div><p class="map-load-status" role="status">${located.length?'Cargando mapa…':'No hay comercios con ubicación válida.'}</p></div>`;const host=root.querySelector('.geographic-map'),status=root.querySelector('.map-load-status'),card=root.querySelector('.map-selected-card');
 mapLibrary().then(L=>{
  if(!host.isConnected)return;
- const map=geographicMap=L.map(host,{scrollWheelZoom:true,dragging:true,touchZoom:true,zoomControl:false});
+ const map=geographicMap=L.map(host,{scrollWheelZoom:true,dragging:true,touchZoom:true,zoomControl:false,minZoom:1,maxZoom:19});
  const layers={
-  'Mapa':L.tileLayer('https://api.maptiler.com/maps/streets-v4/256/{z}/{x}/{y}.png?key='+encodeURIComponent(mapTilerKey),{minZoom:1,maxZoom:19,attribution:'<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>'}),
+  'Mapa':L.maplibreGL({style:'https://api.maptiler.com/maps/streets-v4/style.json?key='+encodeURIComponent(mapTilerKey),interactive:false,attribution:'<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>'}),
   'Satélite':L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'})
  };
  for(const layer of Object.values(layers))layer.on('tileerror',()=>{if(map.hasLayer(layer)){status.hidden=false;status.textContent='No se pudo cargar parte del mapa. Podés cambiar de vista o volver a intentar.';}});
  layers[mapBaseLayer].addTo(map);
+ const watchVectorErrors=()=>layers.Mapa.getMaplibreMap?.()?.on('error',()=>{if(map.hasLayer(layers.Mapa)){status.hidden=false;status.textContent='No se pudo cargar parte del mapa. Revisá la conexión o probá la vista Satélite.';}});if(mapBaseLayer==='Mapa')watchVectorErrors();
  L.control.layers(layers,null,{collapsed:false,position:'topright'}).addTo(map);
- map.on('baselayerchange',e=>{mapBaseLayer=e.name;status.hidden=true;});
+ map.on('baselayerchange',e=>{mapBaseLayer=e.name;status.hidden=true;if(e.name==='Mapa')watchVectorErrors();});
  status.hidden=true;
  L.control.zoom({position:'bottomright'}).addTo(map);
  const locate=L.control({position:'bottomright'});locate.onAdd=()=>{const box=L.DomUtil.create('div','leaflet-bar device-center-control');const button=document.createElement('button');button.type='button';button.setAttribute('aria-label','Centrar en mi ubicación');button.title='Centrar en mi ubicación';button.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3" stroke="currentColor" stroke-width="2"/></svg>';button.onclick=()=>window.centerDeviceOnMap?.();box.append(button);L.DomEvent.disableClickPropagation(box);L.DomEvent.disableScrollPropagation(box);return box;};locate.addTo(map);
