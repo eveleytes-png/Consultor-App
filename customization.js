@@ -59,8 +59,9 @@ renderSellerResults=function(){geographicMap?.remove();geographicMap=null;if(sel
 mapLibrary().then(L=>{
  if(!host.isConnected)return;
  const map=geographicMap=L.map(host,{scrollWheelZoom:true,dragging:true,touchZoom:true,zoomControl:false,minZoom:1,maxZoom:19});
+ map.attributionControl?.setPosition('bottomleft');
  const layers={
-  'Mapa':L.maplibreGL({style:'https://api.maptiler.com/maps/streets-v4/style.json?key='+encodeURIComponent(mapTilerKey),interactive:false,attribution:'<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">&copy; OpenStreetMap contributors</a>'}),
+  'Mapa':L.maplibreGL({style:'https://api.maptiler.com/maps/streets-v4/style.json?key='+encodeURIComponent(mapTilerKey),interactive:false}),
   'Satélite':L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'})
  };
  for(const layer of Object.values(layers))layer.on('tileerror',()=>{if(map.hasLayer(layer)){status.hidden=false;status.textContent='No se pudo cargar parte del mapa. Podés cambiar de vista o volver a intentar.';}});
