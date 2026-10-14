@@ -1,5 +1,6 @@
 /* Shared server connection, like MisionesMP. Never expose service credentials. */
-import {createHmac,timingSafeEqual} from 'node:crypto';
+import {createHmac,timingSafeEqual,randomUUID} from 'node:crypto';
+import {sheetLock} from './sheets-lock.mjs';
 const FILE='1yKyxi4zM3XBVc7-XY3gDZ9TiWrdpbnTdoOUq5p9n73E';
 const TABS={0:'BaseApp',500157585:'Points_ConsultoresApp',1266882678:'Links_ConsultoresApp'};
 const CLIENT='503544568734-pb0dmd3mud6in8eeiigvpps8v26u6s5v.apps.googleusercontent.com';
@@ -35,7 +36,7 @@ function authorizeOperation(path,body){
 }
 async function defaultIdentity(credential,client){const {OAuth2Client}=await import('google-auth-library');const ticket=await new OAuth2Client(client).verifyIdToken({idToken:credential,audience:client});return ticket.getPayload();}
 async function defaultGoogle(c,path,body,mode){const {JWT}=await import('google-auth-library');const key=c.email+':'+mode;let auth=googleClients.get(key);if(!auth){auth=new JWT({email:c.email,key:c.key,scopes:['https://www.googleapis.com/auth/spreadsheets']});googleClients.set(key,auth);}const result=await auth.request({url:'https://sheets.googleapis.com/v4/spreadsheets/'+FILE+path,method:body?'POST':'GET',data:body,timeout:15000});return result.data;}
-export function createHandler({env=process.env,verifyIdentity=defaultIdentity,googleRequest=defaultGoogle}={}){return async(req,res)=>{
+export function createHandler({env=process.env,verifyIdentity=defaultIdentity,googleRequest=defaultGoogle,lock=sheetLock}={}){let snapshot=null,snapshotAt=0,snapshotPending=null,generation=0;return async(req,res)=>{
  res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');
  const send=(status,value)=>res.status(status).json(value),c=config(env);
  try{
@@ -52,7 +53,39 @@ export function createHandler({env=process.env,verifyIdentity=defaultIdentity,go
   }
   if(!session(req.headers.cookie,c))throw fail('Ingresá con tu cuenta de Google para consultar la planilla.',401);
   if(body.operation==='logout'){res.setHeader('Set-Cookie',`${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);return send(200,{authenticated:false});}
+  if(body.operation==='editSeller'){
+   const {sellerId,column,value,expected,header}=body;
+   if(Object.keys(body).some(k=>!['operation','sellerId','column','value','expected','header'].includes(k))||typeof sellerId!=='string'||!sellerId||sellerId.length>200||!Number.isInteger(column)||column<0||column>14||typeof value!=='string'||value.length>10000||typeof expected!=='string'||typeof header!=='string')throw fail('Solo se editan celdas de A a O.');
+   const owner=randomUUID();if(!await lock('acquire',owner))throw fail('Otro guardado está en curso o pendiente de confirmar. Actualizá antes de reintentar.',409);
+   let writing=false,confirmed=false;
+   try{
+    const read=async()=>{const data=await googleRequest(c,'/values:batchGetByDataFilter',{dataFilters:[{gridRange:{sheetId:0,startRowIndex:0}}],majorDimension:'ROWS',valueRenderOption:'FORMATTED_VALUE'},'read');return data.valueRanges?.[0]?.valueRange?.values||[];};
+    const rows=await read();const idColumn=rows[0]?.findIndex(h=>String(h).trim().toLowerCase()==='cust_id comercio');
+    if(idColumn!==15||String(rows[0]?.[column]??'')!==header)throw fail('Cambió la estructura de BaseApp. Actualizá antes de guardar.',409);
+    const matches=rows.map((row,index)=>({row,index})).filter(r=>r.index>0&&String(r.row[idColumn]??'')===sellerId);
+    if(matches.length!==1)throw fail('No se encuentra un comercio único con ese ID.',409);
+    const {row,index}=matches[0];if(String(row[column]??'')!==expected)throw fail('Este dato cambió en Sheets u otro dispositivo. Cerrá la edición y revisá el valor actualizado.',409);
+    if(column===0&&(!value.trim()||rows.some((r,i)=>i>0&&i!==index&&String(r[0]??'').trim().toLowerCase()===value.trim().toLowerCase())))throw fail('El mail es obligatorio y no puede repetirse.');
+    if(value===expected){confirmed=true;return send(200,{saved:true});}
+    if(!await lock('mark',owner))throw fail('Venció la protección del guardado. No se modificó la planilla.',409);writing=true;
+    generation++;snapshot=null;snapshotAt=0;snapshotPending=null;
+    try{await googleRequest(c,':batchUpdate',{requests:[{updateCells:{range:{sheetId:0,startRowIndex:index,endRowIndex:index+1,startColumnIndex:column,endColumnIndex:column+1},rows:[{values:[{userEnteredValue:{stringValue:value}}]}],fields:'userEnteredValue'}}]},'write');}
+    catch(error){if([400,401,403,404].includes(error.response?.status))confirmed=true;throw fail('No se pudo confirmar el guardado en Google. Revisá BaseApp antes de volver a guardar.',502);}
+    const after=await read();if(String(after[index]?.[15]??'')!==sellerId||String(after[index]?.[column]??'')!==value)throw fail('Google recibió el cambio, pero el dato volvió a cambiar. Revisá BaseApp antes de reintentar.',409);
+    confirmed=true;return send(200,{saved:true});
+   }finally{if(!writing||confirmed){if(!await lock('release',owner))throw fail('El dato se guardó, pero no se pudo cerrar la protección. Revisá antes de reintentar.',503);}}
+  }
+  if(body.operation==='snapshot'){
+   if(Object.keys(body).some(k=>!['operation','fresh'].includes(k))||(body.fresh!==undefined&&typeof body.fresh!=='boolean'))throw fail('Solicitud inválida.');
+   if(!body.fresh&&snapshot&&Date.now()-snapshotAt<4000)return send(200,snapshot);
+   if(body.fresh||!snapshotPending){const version=generation;const pending=googleRequest(c,'/values:batchGetByDataFilter',{dataFilters:Object.keys(TABS).map(id=>({gridRange:{sheetId:Number(id),startRowIndex:0}})),majorDimension:'ROWS',valueRenderOption:'FORMATTED_VALUE'},'read').then(data=>{
+    const result={};for(const [id,key] of [[0,'portfolio'],[500157585,'stock'],[1266882678,'links']]){const range=data.valueRanges?.find(r=>r.dataFilters?.some(f=>f.gridRange?.sheetId===id));if(!range)throw fail('Google no devolvió todas las pestañas configuradas.',502);result[key]=range.valueRange?.values||[];}
+    if(version===generation){snapshot=result;snapshotAt=Date.now();}return result;
+   });snapshotPending=pending;pending.finally(()=>{if(snapshotPending===pending)snapshotPending=null;}).catch(()=>{});}
+   return send(200,await snapshotPending);
+  }
   const mode=authorizeOperation(body.path,body.body);
+  if(mode==='write'){generation++;snapshot=null;snapshotAt=0;snapshotPending=null;}
   let data;try{data=await googleRequest(c,body.path,body.body,mode);}catch(error){const status=error.response?.status;throw fail(status===403?'La cuenta de servicio no tiene acceso a la planilla. Revisá Compartir.':status===404?'No se encuentra la planilla configurada.':'Google no pudo completar la operación. Actualizá antes de reintentar.',502);}
   if(body.path===META){data={...data,sheets:(data.sheets||[]).filter(s=>Object.hasOwn(TABS,s.properties?.sheetId))};for(const [id,title] of Object.entries(TABS))if(!data.sheets.some(s=>s.properties.sheetId===Number(id)&&s.properties.title===title))throw fail('Cambió el nombre o ID de una pestaña configurada.',409);}
   return send(200,data);
