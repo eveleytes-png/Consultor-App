@@ -8,3 +8,5 @@ export async function sheetLock(method,owner){
  if(!response.ok)throw Object.assign(Error(result.code==='PGRST202'?'Falta habilitar la protección de guardados en Supabase. No se modificó la planilla.':'No se pudo confirmar la protección del guardado. No reintentes hasta actualizar.'),{status:503});
  return result===true;
 }
+// Vercel discovers files in api/. This helper is not a public lock endpoint.
+export default function unavailable(req,res){res.status(404).json({error:'Ruta no disponible.'});}
