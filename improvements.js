@@ -61,12 +61,12 @@ function exportRows(print=false,rows=filteredSellers()){const keys=(print?['c1',
 let xlsxPromise;async function loadExcel(){if(window.XLSX)return window.XLSX;if(!xlsxPromise)xlsxPromise=new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js';s.onload=()=>resolve(window.XLSX);s.onerror=()=>{xlsxPromise=null;s.remove();reject(Error('No se pudo cargar la exportación. Revisá tu conexión.'));};document.head.append(s);});return xlsxPromise;}
 const PLANILLA_MAX_COLUMNS=8;
 function planillaContext(kind='sellers',selection){
- const actions=kind==='actions',subset=Array.isArray(selection),columns=actions?[{key:'action',label:'Acción comercial'},...portfolioColumns]:[...portfolioColumns];
+ const actions=kind==='actions',subset=Array.isArray(selection),columns=[...portfolioColumns].sort((a,b)=>a.index-b.index).concat(actions?[{key:'action',label:'Acción comercial'}]:[]);
  const rows=[...(actions?filteredAssignments():subset?selection:filteredSellers())];
- const defaults=(actions?actionTableColumns().map(c=>c.key):visibleDetailColumns()).filter(key=>columns.some(c=>c.key===key)).slice(0,PLANILLA_MAX_COLUMNS);
+ const defaults=[];
  return {columns,rows,defaults,title:actions?'Acciones comerciales':subset?'Comercios sin ubicación':'Comercios',filename:actions?'Consultor_App_Acciones':subset?'Consultor_App_Sin_ubicacion':'Consultor_App_Comercios',value:(row,key)=>actions?assignmentCell(row,{key}):columnValue(row,key)};
 }
-function planillaTable(context,keys){if(!keys.length||keys.length>PLANILLA_MAX_COLUMNS)throw Error('Seleccioná entre 1 y 8 columnas.');return [keys.map(key=>{const c=context.columns.find(c=>c.key===key);if(!c)throw Error('La columna seleccionada no está disponible.');return c.label;}),...context.rows.map(row=>keys.map(key=>String(context.value(row,key)??'')))];}
+function planillaTable(context,keys){if(!keys.length||keys.length>PLANILLA_MAX_COLUMNS)throw Error('Seleccioná entre 1 y 8 columnas.');keys=[...keys].sort((a,b)=>context.columns.findIndex(c=>c.key===a)-context.columns.findIndex(c=>c.key===b));return [keys.map(key=>{const c=context.columns.find(c=>c.key===key);if(!c)throw Error('La columna seleccionada no está disponible.');return c.label;}),...context.rows.map(row=>keys.map(key=>String(context.value(row,key)??'')))];}
 let pdfPromise;
 async function loadPlanillaPdf(){
  if(window.jspdf?.jsPDF?.API.autoTable)return window.jspdf.jsPDF;
