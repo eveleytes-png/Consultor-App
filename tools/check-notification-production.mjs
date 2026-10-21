@@ -11,4 +11,4 @@ for(const path of ['/lib/notification-service.mjs','/supabase/notifications.sql'
 const seed=await read('/demo-data.js'),context={window:{}};vm.runInNewContext(seed.text,context);
 assert.equal(context.window.CONSULTOR_DEMO_DATA.sellers.length,0);
 const profile=await read('/notifications.js');assert.equal(profile.status,200);assert.ok(profile.text.includes('Resumen diario'));
-console.log(JSON.stringify({origin,googleConfigured:data.configured,privateStateEnabled:data.privateStateEnabled,anonymousDataBlocked:true,publicMerchantSeedRemoved:true,privateSourceExcluded:true}));
+console.log(JSON.stringify({origin,googleConfigured:data.configured,privateStateEnabled:data.privateStateEnabled,newEndpointsRequireLogin:true,publicMerchantSeedRemoved:true,privateSourceExcluded:true}));

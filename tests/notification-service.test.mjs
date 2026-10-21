@@ -18,6 +18,13 @@ function setup(){
  return {service,store,sent,providers,setRows:r=>{rows=r;}};
 }
 const now=new Date('2026-10-21T15:00:00Z');
+test('Remitente Resend de prueba exige correo del titular; dominio propio admite otro destino',async()=>{
+ const x=setup();x.service.env={...env,NOTIFICATION_FROM:'Consultor App <onboarding@resend.dev>'};
+ await assert.rejects(()=>x.service.configure('owner@example.com',{enabled:false,time:'09:00',email:'other@example.com'}),/remitente de prueba/);
+ await x.service.configure('owner@example.com',{enabled:false,time:'09:00',email:'owner@example.com'});
+ x.service.env.NOTIFICATION_FROM='Consultor App <resumen@dominio-propio.example>';
+ await x.service.configure('owner@example.com',{enabled:false,time:'09:00',email:'other@example.com'});
+});
 test('Dos ejecuciones concurrentes y repetidas: una aceptación por canal',async()=>{
  const x=setup();await Promise.all([x.service.run(now),x.service.run(now)]);await x.service.run(now);
  assert.equal(x.sent.filter(s=>s[0]==='email').length,1);assert.equal(x.sent.filter(s=>s[0]==='telegram').length,1);
