@@ -32,3 +32,5 @@ body:not(.connection-checked) main>*{display:none}body:not(.connection-checked) 
 /* Contrast adjustments measured against the existing white/page backgrounds. */
 .count,.map-results-summary,.legend{color:#666777}.planilla-description,.planilla-steps li,.planilla-format-info small,.planilla-review dt{color:#6f7080}.planilla-steps .is-current,.planilla-steps .is-complete{color:var(--purple)}
 
+
+.profile-config .notification-enable{display:flex;align-items:center;gap:.6rem}.profile-config .notification-enable input{width:auto;margin:0;flex:none}

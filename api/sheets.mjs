@@ -44,7 +44,7 @@ return async(req,res)=>{
  res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');
  const send=(status,value)=>res.status(status).json(value),c=config(env);
  try{
-  if(req.method==='GET'){return send(200,{configured:configured(c),authenticated:configured(c)&&!!session(req.headers.cookie,c),clientId:c.client,sellerWritesEnabled:env.GOOGLE_SELLER_WRITES_ENABLED==='true'});}
+  if(req.method==='GET'){return send(200,{configured:configured(c),authenticated:configured(c)&&!!session(req.headers.cookie,c),privateStateEnabled:!!(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY),clientId:c.client,sellerWritesEnabled:env.GOOGLE_SELLER_WRITES_ENABLED==='true'});}
   if(req.method!=='POST'){res.setHeader('Allow','GET, POST');return send(405,{error:'Método no permitido.'});}
   if(!configured(c))return send(503,{error:'Falta configurar la conexión compartida en Vercel.'});
   if(req.headers.origin!==c.origin)throw fail('Origen no autorizado.',403);
@@ -102,4 +102,17 @@ return async(req,res)=>{
   return send(200,data);
  }catch(error){return send(error.status||400,{error:error.status?error.message:'Solicitud inválida.'});}
 };}
+// Reused by server-only APIs; never accept an owner supplied by the browser.
+export {config as serverConfig,session as readSession,defaultGoogle as googleRequest};
+export function singleConsultant(env=process.env){
+ const c=config(env);
+ if(c.allowed.length!==1)throw fail('Las funciones de un solo consultor requieren exactamente una cuenta autorizada.',503);
+ return c.allowed[0];
+}
+export function requireConsultant(req,env=process.env){
+ const c=config(env),owner=singleConsultant(env),identity=session(req.headers.cookie,c);
+ if(!identity||identity.email!==owner)throw fail('Ingresá con la cuenta autorizada.',401);
+ if(req.method!=='GET'&&req.headers.origin!==c.origin)throw fail('Origen no autorizado.',403);
+ return owner;
+}
 export default createHandler();

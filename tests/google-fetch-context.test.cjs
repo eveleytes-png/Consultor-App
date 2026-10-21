@@ -1,0 +1,2 @@
+const assert=require('node:assert/strict'),{SheetsGateway}=require('../dist/sheets-gateway.js');
+(async()=>{const previous=globalThis.fetch;try{globalThis.fetch=async function(){assert.equal(this,globalThis);return {ok:true,json:async()=>({sheets:[]})};};const g=new SheetsGateway({fileId:'test',token:()=> 'test'});assert.deepEqual(await g.metadata(),{sheets:[]});console.log('PASS: Google requests retain native fetch context.');}finally{globalThis.fetch=previous;}})();

@@ -1,0 +1,24 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const DemoStore=require('../dist/demo-store.js');
+const dataContext={window:{}};vm.runInNewContext(fs.readFileSync('dist/demo-data.js','utf8'),dataContext);
+const seed=dataContext.window.CONSULTOR_DEMO_DATA;
+assert.equal(seed.sellers.length,0);assert.equal(seed.activities.length,0);assert.equal(seed.links.length,0);assert.equal(seed.equipment.length,0);
+const memory=new Map(),storage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
+const ctx=vm.createContext({window:{CONSULTOR_DEMO_DATA:seed,CONSULTOR_GOOGLE_CONFIG:{}},DemoStore,localStorage:storage,escapeHtml:String,opNorm:s=>String(s).toLowerCase().trim(),activities:[],usefulLinks:[],sellers:[],liveAssignments:[],actionRegistry:[],liveEquipment:[],actionColumns:[2,3],pointSelection:new Set(),actionSelection:new Set(),syncSellerActions:()=>{},showOpNotice:()=>{},HTMLDialogElement:class{close(){}},Date,URL,console});
+ctx.ensureActionIds=()=>{};ctx.renderSellerResults=()=>{};ctx.renderPointResults=()=>{};ctx.renderActionResults=()=>{};
+let src=fs.readFileSync('dist/sheets-app.js','utf8').split('window.SheetsApp=')[0];
+src+='window.test={loadDemo,snapshot,persistRemote,restore};})();';vm.runInContext(src,ctx);
+(async()=>{
+const api=ctx.window.test;api.loadDemo();const before=api.snapshot();
+ctx.activities.push({id:'test',description:'Test only',date:'2026-09-30',time:'09:00',completed:false});
+ctx.usefulLinks.push({url:'https://example.com',comment:'Test only',favorite:true});
+ctx.actionRegistry.push({name:'Test only',color:'red'});ctx.liveAssignments.push({id:'test',action:'Test only',email:'test@example.com'});
+ctx.liveEquipment.push({id:'test',serial:'TEST',type:'Propio',status:'Disponible'});
+await api.persistRemote(before,api.snapshot());api.restore(before);api.loadDemo();
+assert.equal(ctx.activities.length,1);assert.equal(ctx.usefulLinks.length,1);assert.equal(ctx.actionRegistry.length,1);assert.equal(ctx.liveAssignments.length,1);assert.equal(ctx.liveEquipment.length,1);
+ctx.activities.length=0;ctx.usefulLinks.length=0;ctx.liveEquipment=[];await api.persistRemote(before,api.snapshot());api.loadDemo();assert.equal(ctx.activities.length,0);assert.equal(ctx.usefulLinks.length,0);assert.equal(ctx.liveEquipment.length,0);
+storage.setItem=()=>{throw Error('Quota exceeded');};await assert.rejects(()=>api.persistRemote(before,api.snapshot()),/Quota/);
+assert.equal(memory.has('consultor-sheet-binding-v1'),false);
+memory.set(DemoStore.key,'broken');assert.throws(()=>DemoStore.load(storage,seed));
+console.log('PASS: no public merchant seed; local create/update/delete survives reload; no reseeding empty arrays; storage errors surface; no Google calls. Test records only in VM memory.');
+})();
