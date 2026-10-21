@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FFE600">
+  <meta name="description" content="Propuesta visual independiente para Consultor App.">
+  <title>Consultor App · Propuesta visual</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="propuesta.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#inicio" aria-label="Consultor App, ir al inicio">
+      <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Logo%20Horizontal-tGRODHC5IIj5ezT6fQsIEmEaiEd96S.png" alt="Consultor App">
+    </a>
+    <nav class="desktop-nav" aria-label="Navegación principal">
+      <a class="nav-link active" href="#inicio">Inicio</a>
+      <a class="nav-link" href="#cartera">Cartera <span class="nav-count">24</span></a>
+      <a class="nav-link" href="#agenda">Agenda</a>
+      <a class="nav-link" href="#recursos">Recursos</a>
+    </nav>
+    <button class="profile-button" type="button" aria-label="Abrir menú de perfil"><span class="avatar">EC</span><span class="profile-copy"><strong>Eva Consultora</strong><small>Equipo Centro</small></span><span class="chevron">⌄</span></button>
+  </header>
+
+  <main id="inicio">
+    <section class="hero-row" aria-labelledby="page-title">
+      <div><p class="eyebrow">MARTES 21 DE OCTUBRE · BUENOS AIRES</p><h1 id="page-title">Tu jornada, <span>en control.</span></h1><p class="lede">Una vista rápida para priorizar comercios, completar visitas y mantener tu cartera activa.</p></div>
+      <button class="primary-action" type="button" data-action="Nueva actividad"><span>＋</span> Nueva actividad</button>
+    </section>
+
+    <section class="priority-card" aria-labelledby="priority-title">
+      <div class="priority-mark">!</div>
+      <div class="priority-content"><p class="eyebrow">PRÓXIMA PRIORIDAD</p><h2 id="priority-title">Tenés 3 comercios para visitar hoy</h2><p>La primera visita empieza a las <strong>09:30</strong>. Revisá la ruta y salí con todo preparado.</p></div>
+      <a class="text-action" href="#agenda">Ver agenda <span>→</span></a>
+    </section>
+
+    <section class="section-block" id="cartera" aria-labelledby="portfolio-title">
+      <div class="section-heading"><div><p class="eyebrow">RESUMEN DE CARTERA</p><h2 id="portfolio-title">Lo que está pasando</h2></div><a class="text-action" href="#cartera-detalle">Ver cartera completa <span>→</span></a></div>
+      <div class="metrics-grid">
+        <article class="metric-card metric-main"><div class="metric-top"><span class="metric-icon blue">⌂</span><span class="trend up">↑ 8% este mes</span></div><strong class="metric-number">24</strong><h3>Comercios activos</h3><p>En tu cartera</p></article>
+        <article class="metric-card"><div class="metric-top"><span class="metric-icon cyan">✓</span><span class="trend up">↑ 4</span></div><strong class="metric-number">18</strong><h3>Con aceptación</h3><p>75% de tu cartera</p></article>
+        <article class="metric-card"><div class="metric-top"><span class="metric-icon yellow">◒</span><span class="trend neutral">Meta 60%</span></div><strong class="metric-number">11</strong><h3>Encuestas realizadas</h3><p>7 pendientes para la meta</p></article>
+        <article class="metric-card"><div class="metric-top"><span class="metric-icon navy">◆</span><span class="trend neutral">Sin cambios</span></div><strong class="metric-number">9</strong><h3>Comercios blindados</h3><p>37,5% de tu cartera</p></article>
+      </div>
+    </section>
+
+    <div class="content-grid">
+      <section class="panel agenda-panel" id="agenda" aria-labelledby="agenda-title">
+        <div class="section-heading compact"><div><p class="eyebrow">MARTES 21 OCT</p><h2 id="agenda-title">Agenda de hoy</h2></div><button class="icon-button" type="button" aria-label="Agregar actividad" data-action="Agregar actividad">＋</button></div>
+        <div class="timeline">
+          <article class="timeline-item current"><time>09:30</time><div class="timeline-dot"></div><div><span class="status-pill live">En 35 min</span><h3>Visita · Kiosco La Esquina</h3><p>Av. Rivadavia 4820 · Caballito</p></div><button class="more-button" type="button" aria-label="Más opciones">•••</button></article>
+          <article class="timeline-item"><time>11:00</time><div class="timeline-dot"></div><div><h3>Llamada · Farmacia Central</h3><p>Confirmar instalación de Point</p></div><button class="more-button" type="button" aria-label="Más opciones">•••</button></article>
+          <article class="timeline-item"><time>15:30</time><div class="timeline-dot"></div><div><h3>Visita · Panadería Norte</h3><p>Av. Warnes 1150 · Villa Crespo</p></div><button class="more-button" type="button" aria-label="Más opciones">•••</button></article>
+        </div>
+        <a class="panel-footer-link" href="#agenda-completa">Abrir agenda completa <span>→</span></a>
+      </section>
+
+      <section class="panel progress-panel" aria-labelledby="progress-title">
+        <div class="section-heading compact"><div><p class="eyebrow">OBJETIVO DEL MES</p><h2 id="progress-title">Encuestas válidas</h2></div><button class="more-button" type="button" aria-label="Más información">•••</button></div>
+        <div class="progress-summary"><strong>61<span>%</span></strong><p>11 de 18 comercios<br>con aceptación</p></div>
+        <div class="progress-track" role="progressbar" aria-label="61 por ciento de encuestas válidas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="61"><span></span></div>
+        <div class="goal-row"><span class="goal-check">✓</span><div><strong>Meta 60%</strong><p>Alcanzada con 11 encuestas</p></div><span class="goal-state">Listo</span></div>
+        <div class="goal-row"><span class="goal-open">○</span><div><strong>Meta 70%</strong><p>Faltan 2 encuestas</p></div><span class="goal-state open">En camino</span></div>
+      </section>
+    </div>
+
+    <section class="section-block resource-section" id="recursos" aria-labelledby="resources-title">
+      <div class="section-heading"><div><p class="eyebrow">ACCESOS RÁPIDOS</p><h2 id="resources-title">Recursos para la visita</h2></div><a class="text-action" href="#recursos-completos">Ver todos <span>→</span></a></div>
+      <div class="resource-grid"><a class="resource-card" href="#manuales"><span class="resource-icon cyan">▣</span><span><strong>Manuales de producto</strong><small>Material para consultar</small></span><span class="resource-arrow">→</span></a><a class="resource-card" href="#comunicaciones"><span class="resource-icon yellow">↗</span><span><strong>Comunicaciones vigentes</strong><small>Última actualización: hoy</small></span><span class="resource-arrow">→</span></a><a class="resource-card" href="#links"><span class="resource-icon blue">⌁</span><span><strong>Mis links guardados</strong><small>3 accesos frecuentes</small></span><span class="resource-arrow">→</span></a></div>
+    </section>
+
+    <section class="design-note" aria-labelledby="design-title"><div><p class="eyebrow">NOTA DE LA PROPUESTA</p><h2 id="design-title">Una herramienta de campo, no una planilla.</h2><p>La información se organiza en tres decisiones: qué requiere atención ahora, cómo viene la cartera y qué recurso te ayuda a resolver la próxima visita.</p></div><dl class="token-list"><div><dt>Acción primaria</dt><dd><i class="swatch yellow"></i>#FFE600</dd></div><div><dt>Texto principal</dt><dd><i class="swatch ink"></i>#333333</dd></div><div><dt>Superficie</dt><dd><i class="swatch white"></i>#FFFFFF</dd></div></dl></section>
+  </main>
+  <nav class="mobile-nav" aria-label="Navegación móvil"><a class="active" href="#inicio"><span>⌂</span>Inicio</a><a href="#cartera"><span>◫</span>Cartera</a><a href="#agenda"><span>◷</span>Agenda</a><button type="button" data-action="Abrir menú"><span>•••</span>Más</button></nav>
+  <div class="toast" role="status" aria-live="polite"></div>
+  <script src="propuesta.js"></script>
+</body>
+</html>
