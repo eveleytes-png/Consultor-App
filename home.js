@@ -9,8 +9,27 @@ function computePortfolio(rows){
   return {total:merchants.length,accepted:accepted.length,rejected:rejected.length,blindados,
     unknown:merchants.length-accepted.length-rejected.length,surveyed:surveyed.length,
     percentage:accepted.length?surveyed.length/accepted.length*100:null,
-    goals:[60,70].map(target=>({target,total:Math.ceil(accepted.length*target/100),missing:Math.max(0,Math.ceil(accepted.length*target/100)-surveyed.length)}))};
+    goals:[60,75,100].map(target=>({target,total:Math.ceil(accepted.length*target/100),missing:Math.max(0,Math.ceil(accepted.length*target/100)-surveyed.length)}))};
 }
+// Node reuses the exact Inicio calculation; browser scripts keep their existing globals.
+function mapPortfolioHeaders(headers){
+ const labels={n:'Nombre del comercio',e:'Mail',id:'ID',nombre:'Nombre',apellido:'Apellido',telefono1:'Teléfono 1',whatsapp:'WhatsApp oficial',latlog:'LatLog',z:'Zona',s:'Subzona',accept:'Aceptación',survey:'Encuesta valida',blindaje:'Blindaje',d:'Última respuesta'};
+ const aliases={n:['comercio','nombre comercio'],id:['cust_id comercio'],s:['sub-zona'],latlog:['latlong'],whatsapp:['telefono oficial'],telefono1:['telefono1'],d:['ultima fecha contesto']};
+ return Object.fromEntries(Object.entries(labels).map(([key,label])=>[key,headers.findIndex(h=>normalizeAnswer(h)===normalizeAnswer(label)||(aliases[key]||[]).includes(normalizeAnswer(h)))]));
+}
+function parsePortfolioRows(values,mapping){
+ const rows=[],ids=new Set(),mails=new Set();
+ for(const row of values.slice(1)){
+  const s={n:'',a:[],sourceRow:rows.length+2,sourceValues:row.map(v=>String(v??''))};
+  for(const [key,col] of Object.entries(mapping))s[key]=col<0?'':String(row[col]??'');
+  if(!s.e&&!s.id&&!s.n)continue;
+  if(!s.id||!s.e)throw Error('Cada comercio necesita ID y Mail.');
+  if(ids.has(s.id)||mails.has(normalizeAnswer(s.e)))throw Error('Hay IDs o mails repetidos en la cartera. Corregilos en Sheets.');
+  ids.add(s.id);mails.add(normalizeAnswer(s.e));rows.push(s);
+ }
+ return rows;
+}
+if(typeof module!=='undefined'&&module.exports)module.exports={computePortfolio,normalizeAnswer,mapPortfolioHeaders,parsePortfolioRows};
 const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const todayKey=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const activities=[];

@@ -1,0 +1,4 @@
+dist/
+node_modules/
+.env*
+tests/notifications-profile-390.png

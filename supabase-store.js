@@ -3,6 +3,10 @@
   class SupabaseStore {
     constructor(config, request=(...args)=>globalThis.fetch(...args)){this.config=config;this.request=request;this.revision=null;this.loading=false;}
     async call(path,options={}){
+      if(this.config.server){
+        const response=await this.request('/api/state',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({path,method:options.method||'GET',data:options.body?JSON.parse(options.body):undefined}),signal:AbortSignal.timeout(15000)});
+        const data=await response.json();if(!response.ok)throw Error(data.error||'No se pudo acceder a los datos privados.');return data;
+      }
       const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
       try{
         const response=await this.request(this.config.url+'/rest/v1/'+path,{...options,signal:controller.signal,headers:{apikey:this.config.publishableKey,'Content-Type':'application/json',...options.headers}});
