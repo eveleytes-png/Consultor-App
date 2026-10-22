@@ -2,8 +2,10 @@
 -- URL: https://YOUR_PRODUCTION_DOMAIN/api/notifications?run=daily
 -- AUTH: Bearer <the same NOTIFICATION_CRON_SECRET configured on Vercel>
 -- Never put those values in a committed SQL file. Run only after setup checks.
-create extension if not exists pg_cron;
-create extension if not exists pg_net;
+create extension if not exists pg_cron with schema pg_catalog;
+create extension if not exists pg_net with schema extensions;
+grant usage on schema cron to postgres;
+grant all privileges on all tables in schema cron to postgres;
 select cron.schedule('consultor-daily-notifications','*/5 * * * *', $job$
  select net.http_post(
   url := (select decrypted_secret from vault.decrypted_secrets where name='NOTIFICATION_WORKER_URL'),
