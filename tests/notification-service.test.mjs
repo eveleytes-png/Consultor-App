@@ -12,7 +12,7 @@ class MemoryStore{
 const env={AUTH_ALLOWED_EMAILS:'owner@example.com',AUTH_SECRET:'a'.repeat(32),APP_ORIGIN:'https://example.com',TELEGRAM_BOT_USERNAME:'test_bot',TELEGRAM_WEBHOOK_SECRET:'secret',NOTIFICATION_CRON_SECRET:'cron-secret'};
 function setup(){
  const store=new MemoryStore(),sent=[];
- const providers={emailConfigured:true,telegramConfigured:true,email:async(...a)=>{sent.push(['email',...a]);return 'email-id';},telegram:async(...a)=>{sent.push(['telegram',...a]);return 'telegram-id';}};
+ const providers={emailConfigured:true,telegramConfigured:true,configureTelegramWebhook:async()=>true,email:async(...a)=>{sent.push(['email',...a]);return 'email-id';},telegram:async(...a)=>{sent.push(['telegram',...a]);return 'telegram-id';}};
  let rows=[['Mail','Cust_id comercio','Nombre del comercio','Aceptación','Encuesta valida','Blindaje'],['m@example.com','1','Comercio','Si','No','']];
  const service=new NotificationService({env,store,providers,google:async()=>({valueRanges:[{valueRange:{values:structuredClone(rows)}}]})});
  return {service,store,sent,providers,setRows:r=>{rows=r;}};
@@ -69,6 +69,13 @@ test('Telegram: chat privado, desafío de uso único y confirmación desde app',
  await x.service.telegramHook({message:{chat:{id:55,type:'private'},text:'/start '+token}});assert.equal(x.store.state.telegramChat,undefined);
  await x.service.confirmTelegram('owner@example.com');assert.equal(x.store.state.telegramChat,'55');
  await x.service.telegramHook({message:{chat:{id:66,type:'private'},text:'/start '+token}});assert.equal(x.store.state.pendingChat,undefined);
+});
+test('Webhook: secreto en cuerpo servidor, sin borrar pendientes; fallo impide emitir vínculo',async()=>{
+ let requestBody;
+ const p=createProviders({TELEGRAM_BOT_TOKEN:'test-token',TELEGRAM_BOT_USERNAME:'test_bot',TELEGRAM_WEBHOOK_SECRET:'test-secret'},async(url,opt)=>{requestBody=JSON.parse(opt.body);assert.ok(url.endsWith('/setWebhook'));return {ok:true,json:async()=>({ok:true,result:true})};});
+ await p.configureTelegramWebhook('https://example.com/api/notifications?hook=telegram');
+ assert.deepEqual(requestBody,{url:'https://example.com/api/notifications?hook=telegram',secret_token:'test-secret',allowed_updates:['message'],drop_pending_updates:false});
+ const x=setup();x.providers.configureTelegramWebhook=async()=>{throw new ProviderError('temporary');};await assert.rejects(()=>x.service.telegramLink('owner@example.com'));assert.equal(x.store.state.challenges.telegram,undefined);
 });
 test('APIs: anónimo y secretos falsos no ejecutan acciones; multiusuario bloqueado',async()=>{
  const x=setup(),handler=createNotificationHandler({env,service:x.service});
