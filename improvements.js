@@ -95,6 +95,24 @@ function openPlanillaDialog(kind='sellers',selection){
  }
  columnsStep();
 }
+let baseAppBackupBusy=false;
+async function backupBaseApp(button){
+ if(baseAppBackupBusy)return;
+ baseAppBackupBusy=true;button.disabled=true;button.textContent='Preparando copia…';
+ let writable;
+ try{
+  const stamp=new Date().toLocaleString('sv-SE',{timeZone:'America/Argentina/Buenos_Aires'}).replace(/[: ]/g,'-');
+  const filename='BaseApp_Respaldo_'+stamp+'.xlsx';
+  const handle=window.showSaveFilePicker?await window.showSaveFilePicker({suggestedName:filename,types:[{description:'Excel',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]}):null;
+  if(!window.SheetsApp?.readBaseAppBackup)throw Error('La conexión con BaseApp todavía no está disponible.');
+  const rows=await window.SheetsApp.readBaseAppBackup(),X=await loadExcel(),book=X.utils.book_new();
+  X.utils.book_append_sheet(book,X.utils.aoa_to_sheet(rows.map(row=>row.map(value=>String(value??'')))),'BaseApp');
+  const blob=new Blob([X.write(book,{bookType:'xlsx',type:'array'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  if(handle){writable=await handle.createWritable();await writable.write(blob);await writable.close();writable=null;showOpNotice('Copia de BaseApp guardada.');}
+  else{const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);showOpNotice('Descarga de BaseApp iniciada. La ubicación depende de la configuración de tu navegador.');}
+ }catch(error){if(writable)await writable.abort().catch(()=>{});if(error.name!=='AbortError')showOpNotice('No se pudo crear la copia. '+error.message);}
+ finally{baseAppBackupBusy=false;button.disabled=false;button.textContent='Copia de BaseApp';}
+}
 function exportPortfolio(selection){openPlanillaDialog('sellers',Array.isArray(selection)?selection:undefined);}
 exportActions=()=>openPlanillaDialog('actions');
 window.showUnlocatedSellers=function(rows){
@@ -102,7 +120,7 @@ window.showUnlocatedSellers=function(rows){
  d.classList.add('unlocated-dialog');d.querySelector('[data-export-unlocated]').onclick=()=>exportPortfolio(rows);
 };
 function printPortfolio(){const {table,rows}=exportRows(true);if(!rows.length){showOpNotice('No hay comercios para imprimir.');return;}const d=opDialog('Comercios filtrados',`<p>${rows.length} comercios</p><div class="print-portfolio"><table><thead><tr>${table[0].map(v=>`<th>${opEscape(v)}</th>`).join('')}</tr></thead><tbody>${table.slice(1).map(r=>`<tr>${r.map(v=>`<td>${opEscape(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="form-footer"><button class="primary" data-print>Imprimir</button></div>`,true);d.classList.add('portfolio-print-dialog');d.querySelector('[data-print]').onclick=()=>window.print();}
-const oldSellerResults=renderSellerResults;renderSellerResults=function(){oldSellerResults();deviceMarker=null;deviceAccuracy=null;const root=document.querySelector('#seller-results');if(!root)return;const tools=document.createElement('div');tools.className='toolbar portfolio-tools';tools.innerHTML=`${sellerView==='map'?'<span class="location-status" data-location-status role="status"></span>':''}<button class="secondary" data-routes>Crear rutas</button><button class="secondary" data-excel>Descargar planilla</button>`;root.prepend(tools);tools.querySelector('[data-device-position]')?.addEventListener('click',showDevicePosition);if(sellerView==='map'){locationStatus(locationMessage);startDeviceLocation();}else stopDeviceLocation();const rows=filteredSellers(),hasLocation=rows.some(s=>parseLatLog(s.latlog));const routes=tools.querySelector('[data-routes]'),download=tools.querySelector('[data-excel]');routes.disabled=!hasLocation;download.disabled=!rows.length;if(!hasLocation){const reason=document.createElement('small');reason.className='tool-unavailable';reason.textContent='No hay comercios con ubicación válida para crear rutas.';routes.setAttribute('aria-describedby','route-unavailable');reason.id='route-unavailable';tools.append(reason);}routes.onclick=routesDialog;download.onclick=exportPortfolio;};
+const oldSellerResults=renderSellerResults;renderSellerResults=function(){oldSellerResults();deviceMarker=null;deviceAccuracy=null;const root=document.querySelector('#seller-results');if(!root)return;const tools=document.createElement('div');tools.className='toolbar portfolio-tools';tools.innerHTML=`${sellerView==='map'?'<span class="location-status" data-location-status role="status"></span>':''}<button class="secondary" data-routes>Crear rutas</button><button class="secondary" data-excel>Descargar planilla</button><button class="secondary" data-backup-baseapp title="Guardar todos los valores de BaseApp sin filtros. No incluye fórmulas, formatos ni otras pestañas.">Copia de BaseApp</button>`;root.prepend(tools);tools.querySelector('[data-device-position]')?.addEventListener('click',showDevicePosition);if(sellerView==='map'){locationStatus(locationMessage);startDeviceLocation();}else stopDeviceLocation();const rows=filteredSellers(),hasLocation=rows.some(s=>parseLatLog(s.latlog));const routes=tools.querySelector('[data-routes]'),download=tools.querySelector('[data-excel]');routes.disabled=!hasLocation;download.disabled=!rows.length;if(!hasLocation){const reason=document.createElement('small');reason.className='tool-unavailable';reason.textContent='No hay comercios con ubicación válida para crear rutas.';routes.setAttribute('aria-describedby','route-unavailable');reason.id='route-unavailable';tools.append(reason);}routes.onclick=routesDialog;download.onclick=exportPortfolio;const backup=tools.querySelector('[data-backup-baseapp]');backup.disabled=baseAppBackupBusy;backup.onclick=()=>backupBaseApp(backup);};
 })();
 
 

@@ -141,7 +141,15 @@ async function openServerLogin(){
  const err=d.querySelector('[role=alert]');
  try{await script('https://accounts.google.com/gsi/client');if(!d.isConnected)return;google.accounts.id.initialize({client_id:serverIdentity?.clientId||config.clientId,auto_select:false,callback:async response=>{try{const r=await fetch('/api/sheets',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:'login',credential:response.credential})});const data=await r.json();if(!r.ok)throw Error(data.error||'No se pudo iniciar sesión.');d.close();clearSessionMemory();await connectServer();}catch(e){err.textContent=errorText(e);}}});google.accounts.id.renderButton(d.querySelector('[data-google-login]'),{theme:'outline',size:'large',text:'signin_with',width:280});}catch(e){err.textContent=errorText(e);}
 }
-window.SheetsApp={intercept,refreshRemote,get linked(){return !!binding;},get ready(){return ready;}};
+async function readBaseAppBackup(){
+ if(!gateway||!binding||!googleReady)throw Error('Conectá BaseApp desde tu perfil antes de crear una copia.');
+ if(busy)throw Error('Esperá a que termine el guardado antes de crear una copia.');
+ const epoch=accessEpoch,rows=await gateway.read(binding.fileId,binding.portfolioId);
+ if(epoch!==accessEpoch)throw Error('La sesión cambió. Volvé a ingresar para crear una copia.');
+ if(!rows.length||!rows[0]?.length)throw Error('BaseApp no tiene encabezados para generar una copia.');
+ return rows;
+}
+window.SheetsApp={intercept,refreshRemote,readBaseAppBackup,get linked(){return !!binding;},get ready(){return ready;}};
 window.readConsultorSellerCell=async(sellerId,column)=>{if(!serverMode||!googleReady)throw Error('Ingresá con Google para leer el dato original.');return gateway.sellerCell(sellerId,column);};
 window.addEventListener('popstate',e=>{for(const d of document.querySelectorAll('dialog[open]'))d.close();window.restoreConsultorView?.(e.state?.consultorView);document.querySelectorAll('.toast,.load-success').forEach(n=>n.remove());page=new URL(location.href).searchParams.get('pantalla')||'inicio';render();});
 window.addEventListener('storage',e=>{if(!demo&&!shared&&e.key===KEY&&!e.newValue){gateway?.stop();gateway=null;token='';binding=null;ready=false;clearInterval(timer);clearData();render();}});
