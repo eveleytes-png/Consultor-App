@@ -65,6 +65,8 @@ dialog.cartera-filters .filter-menu button{font-size:12px;color:#68758a;border-r
 dialog.cartera-filters .filter-menu button.active{color:#5546ff;background:#f0eeff}
 dialog.cartera-filters .filter-radio{background:white;border-color:#dfe4ec;border-radius:9px;font-size:12px}
 dialog.cartera-filters input{accent-color:#5546ff}
+dialog.cartera-filters .filter-main-group{padding:0 0 20px;margin:0 0 20px;border-bottom:1px solid #edf0f3}
+dialog.cartera-filters .filter-main-group:last-child{margin-bottom:0;border-bottom:0;padding-bottom:0}
 dialog.cartera-filters .primary{background:#5546ff;color:white;border-color:#5546ff;border-radius:10px}
 @media(max-width:1100px){
  .cartera-view .live-seller .survey-buttons{max-width:220px}

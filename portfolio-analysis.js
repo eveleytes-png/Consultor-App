@@ -27,7 +27,7 @@ function computePortfolioAnalysis(rows,headers){
     const add=(map,v)=>map.set(v,(map.get(v)||0)+1);
     for(const row of merchants){
       const t=String(row.sourceValues?.[ti]??'').trim(),c=String(row.sourceValues?.[ci]??'').trim();
-      const states=new Set([normalizeAnswer(t),normalizeAnswer(c)]);
+      const states=new Set([portfolioOpportunity(t,product),portfolioOpportunity(c,product)]);
       // Count each explicit state once per merchant, even when repeated across cells.
       [base,base+' referible'].forEach((label,i)=>{if(states.has(label))opportunities[i]++;});
       const bucket=portfolioTransaction(t);if(bucket===null)add(unknownTransactions,t||'Sin dato');else{transactions[bucket]++;valid++;}

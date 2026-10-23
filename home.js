@@ -1,5 +1,12 @@
 // The same seller rows feed the list and the portfolio. No external data connection.
 function normalizeAnswer(value){return String(value??'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+// Shared opportunity vocabulary. Source cells remain unchanged.
+function portfolioOpportunity(value,product){
+ const v=normalizeAnswer(value).replace(/\s+/g,' ');
+ if(product==='Point')return v==='no point'?'no pointer':(['no pointer','no pointer referible'].includes(v)?v:'');
+ if(product==='QR')return ['no qr','no qr referible'].includes(v)?v:'';
+ return '';
+}
 function computePortfolio(rows){
   const merchants=rows.filter(row=>String(row.Mail??row.e??'').trim());
   const accepted=merchants.filter(row=>normalizeAnswer(row['Aceptación']??row.accept)==='si');
