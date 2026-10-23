@@ -93,3 +93,25 @@ body{margin:0;background:var(--canvas);color:var(--ink);font-family:Arial,Helvet
 #action-results .count{color:var(--muted);font-size:12px;margin:0 0 14px}
 #action-results .assignment{border:1px solid var(--line);border-radius:12px;box-shadow:none}
 @media(max-width:800px){#app>main:has(#action-results) .toolbar{padding:14px}#app>main:has(#action-results) .search{width:100%;min-width:0}#app>main:has(#action-results) .operation-buttons{display:flex;flex-wrap:wrap;gap:8px}}
+
+/* Mobile navigation uses the same navy shell as the desktop sidebar. */
+.workspace-mobile-bar{display:none}
+body.workspace-menu-open{overflow:hidden}
+@media(max-width:800px){
+ #app{padding-top:calc(100px + env(safe-area-inset-top,0px))}
+ .workspace-mobile-bar{display:flex;align-items:center;position:fixed;inset:0 0 auto;box-sizing:border-box;height:calc(76px + env(safe-area-inset-top,0px));padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;background:var(--navy);z-index:35}
+ .workspace-mobile-logo{display:flex;align-items:center;width:116px;height:56px}
+ .workspace-mobile-logo img{display:block;width:100%;height:auto;max-height:56px;object-fit:contain}
+ .workspace-top .workspace-header-actions{display:contents}
+ .workspace-top .workspace-notification,.workspace-top .workspace-hamburger{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));height:44px;width:44px;z-index:36;background:transparent;color:#c8ced9;border-color:#394250;border-radius:10px}
+ .workspace-top .workspace-notification{right:68px}
+ .workspace-top .workspace-hamburger{right:16px;display:flex}
+ .workspace-top .workspace-notification i{border-color:var(--navy)}
+ .workspace-top .workspace-date{margin-top:4px}
+ .workspace-drawer{inset:0;margin:0;width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;box-sizing:border-box;padding:calc(20px + env(safe-area-inset-top,0px)) 20px calc(20px + env(safe-area-inset-bottom,0px));border:0}
+ .workspace-drawer-content{min-height:calc(100dvh - 40px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+ .workspace-drawer-close{width:44px;height:44px;right:16px;top:calc(16px + env(safe-area-inset-top,0px));z-index:1}
+ .workspace-drawer .workspace-logo{align-self:flex-start;max-width:144px;margin-top:0;margin-bottom:24px}
+ .workspace-drawer .workspace-sidebar-bottom{padding-top:24px}
+ .workspace-mobile-logo:focus-visible,.workspace-drawer-close:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
+}
