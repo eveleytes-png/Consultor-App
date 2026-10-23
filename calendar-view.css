@@ -18,7 +18,7 @@
 .calendar-view .calendar-day.is-selected{border-color:var(--navy);background:#fff;color:var(--navy);box-shadow:none;font-weight:700}
 .calendar-view .calendar-day.is-selected.is-today{background:var(--yellow)}
 .calendar-view .calendar-dot,.calendar-day-dialog .calendar-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin:0;flex-shrink:0}
-.calendar-view .calendar-dot.pending,.calendar-day-dialog .calendar-dot.pending{background:var(--yellow)}
+.calendar-view .calendar-dot.pending,.calendar-day-dialog .calendar-dot.pending{background:#dc2626}
 .calendar-view .calendar-dot.completed,.calendar-day-dialog .calendar-dot.completed{background:#6b7280}
 .calendar-view .calendar-legend{display:flex;align-items:center;gap:20px;margin:20px 0 0;color:var(--muted);font-size:11px}
 .calendar-view .calendar-legend span{display:inline-flex;align-items:center;gap:7px}
@@ -71,6 +71,16 @@
 }
 
 /* Override the older overdue marker rule as well as ordinary pending dates. */
-.calendar-view .calendar-day.is-overdue .calendar-dot.pending{background:var(--yellow)}
+.calendar-view .calendar-day.is-overdue .calendar-dot.pending{background:#dc2626}
 .calendar-view .calendar-dot.upcoming,.calendar-day-dialog .calendar-dot.upcoming{background:var(--cyan)}
 .calendar-view .calendar-legend{flex-wrap:wrap;gap:12px 20px}
+
+.calendar-day-dialog .calendar-day-row{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding:12px 0}
+.calendar-day-dialog .calendar-day-row .activity-button{flex:1;min-width:0;width:auto;border:0;padding:0;display:flex;align-items:flex-start;gap:10px}
+.calendar-day-dialog .calendar-day-row .activity-button>span{min-width:0;flex:1}
+.calendar-day-dialog .calendar-day-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:auto}
+.calendar-day-dialog .calendar-day-actions .icon-action,.calendar-day-dialog .calendar-row-done{width:32px;min-width:32px;height:32px;min-height:32px;flex:0 0 32px;box-sizing:border-box;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--navy);padding:6px;font-size:17px}
+.calendar-day-actions svg{width:16px;height:16px}
+.calendar-day-dialog .calendar-row-done{color:var(--muted);background:#edf0f4}
+.calendar-day-dialog .activity-button small.calendar-activity-state{display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11px}
+@media(max-width:400px){.calendar-day-dialog .calendar-day-row{gap:5px}.calendar-day-dialog .calendar-day-actions{gap:3px}.calendar-day-dialog .calendar-day-actions .icon-action,.calendar-day-dialog .calendar-row-done{width:28px;min-width:28px;height:30px;min-height:30px;flex-basis:28px;padding:5px}.calendar-day-dialog .calendar-day-row .activity-button{gap:6px}.calendar-day-dialog .activity-button strong{font-size:12px}}
