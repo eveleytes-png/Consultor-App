@@ -81,3 +81,15 @@ body{margin:0;background:var(--canvas);color:var(--ink);font-family:Arial,Helvet
  .workspace-pagination{grid-row:2;grid-column:1/-1;justify-self:center}
  .workspace-table-footer>.workspace-text-link{grid-row:1;grid-column:2}
 }
+
+/* Actions share the workspace card, border and control treatment. */
+#app>main:has(#action-results) .toolbar{padding:18px;background:#fff;border:1px solid var(--line);border-radius:14px;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+#app>main:has(#action-results) .input{border:1px solid var(--line);border-radius:9px;background:#f5f6f8;min-height:42px}
+#app>main:has(#action-results) .secondary{background:#fff;border:1px solid var(--line);color:var(--navy);border-radius:9px;min-height:42px}
+#app>main:has(#action-results) .primary{background:var(--yellow);color:var(--navy);border-radius:9px;min-height:42px;border:1px solid var(--yellow)}
+#action-results .table-wrap{border:1px solid var(--line);border-radius:14px;box-shadow:none;overflow-x:auto;background:#fff}
+#action-results th{background:#f5f6f8;color:var(--muted);font-size:11px;font-weight:500;padding:16px;text-align:left}
+#action-results td{border-top:1px solid var(--line);padding:16px;font-size:12px;color:var(--ink)}
+#action-results .count{color:var(--muted);font-size:12px;margin:0 0 14px}
+#action-results .assignment{border:1px solid var(--line);border-radius:12px;box-shadow:none}
+@media(max-width:800px){#app>main:has(#action-results) .toolbar{padding:14px}#app>main:has(#action-results) .search{width:100%;min-width:0}#app>main:has(#action-results) .operation-buttons{display:flex;flex-wrap:wrap;gap:8px}}

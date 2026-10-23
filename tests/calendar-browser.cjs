@@ -32,12 +32,10 @@ const fs=require('fs'),http=require('http'),path=require('path'),assert=require(
   await page.locator('dialog[open] button[type="submit"]').click();
   assert.equal(await page.evaluate(()=>activities.find(a=>a.id==='a').description),'Revisión actualizada');
   await page.locator('[data-calendar-view="week"]').click();
-  await page.waitForSelector('.calendar-week-scroll');
+  await page.waitForSelector('.calendar-week-compact');
   assert.equal(await page.locator('.calendar-week-head [data-calendar-date]').count(),7);
   assert.equal(await page.locator('.calendar-week-event').count(),4);
   assert.equal(await page.locator('main .calendar-activities').count(),0);
-  const lanes=await page.locator('.calendar-week-event[data-activity-id="a"],.calendar-week-event[data-activity-id="b"]').evaluateAll(nodes=>nodes.map(e=>({left:e.offsetLeft,width:e.offsetWidth,top:e.offsetTop})));
-  assert.equal(lanes[0].top,lanes[1].top);assert.notEqual(lanes[0].left,lanes[1].left);
   await page.locator('.calendar-week-event[data-activity-id="a"]').click();
   await page.locator('dialog[open] [data-complete-activity]').click();
   assert.equal(await page.evaluate(()=>activities.find(a=>a.id==='a').completed),true);
@@ -46,6 +44,8 @@ const fs=require('fs'),http=require('http'),path=require('path'),assert=require(
   assert.equal(await page.locator('.calendar-day-dialog[open]').count(),0);
   await page.locator('.calendar-view [data-open-activity]').click();
   assert.equal(await page.locator('dialog[open] input[name="date"]').inputValue(),'2026-10-23');
+  assert.match(await page.locator('dialog[open] input[name="time"]').inputValue(),/^\d{2}:\d{2}$/);
+  assert.equal(await page.locator('dialog[open] select[name="repeat"] option').count(),5);
   await page.locator('dialog[open] input[name="time"]').fill('11:15');
   await page.locator('dialog[open] input[name="description"]').fill('Nueva actividad de prueba');
   await page.locator('dialog[open] button[type="submit"]').click();
@@ -68,21 +68,35 @@ const fs=require('fs'),http=require('http'),path=require('path'),assert=require(
    await page.locator('.calendar-day-dialog [data-modal-close]').first().click();
    await page.locator('[data-calendar-view="week"]').click();
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`Weekly page overflow ${width}`);
-   if(width<800)assert.equal(await page.locator('.calendar-week-scroll').evaluate(e=>e.scrollWidth>e.clientWidth),true);
+   assert.equal(await page.locator('.calendar-week-compact').evaluate(e=>e.scrollWidth>e.clientWidth),false);
+   assert.equal(await page.locator('.calendar-view').evaluate(e=>e.getBoundingClientRect().bottom<=innerHeight),true,`All activities fit ${width}`);
    await page.screenshot({path:`tests/calendar-week-${width}.png`,fullPage:true});
   }
-  await page.locator('.calendar-week-scroll').evaluate(e=>{e.scrollTop=700;e.scrollLeft=140;});
-  await page.waitForTimeout(100);
-  await page.evaluate(()=>refreshActivities());
-  await page.waitForFunction(()=>document.querySelector('.calendar-week-scroll')?.scrollTop===700);
-  assert.equal(await page.locator('.calendar-week-scroll').evaluate(e=>e.scrollLeft),140);
   await page.locator('[data-calendar-view="month"]').click();
   await page.locator('[data-calendar-date="2026-10-26"]').click();
   assert.match(await page.locator('.calendar-day-dialog').innerText(),/No hay actividades para este día/);
   await page.locator('.calendar-day-dialog [data-add-day]').click();
   assert.equal(await page.locator('dialog[open] input[name="date"]').inputValue(),'2026-10-26');
   await page.locator('dialog[open] [data-modal-close]').first().click();
+  assert.equal(await page.locator('.calendar-day.is-selected').count(),0);
+  await page.evaluate(()=>{activities.splice(0,activities.length,{id:'recurring',date:'2026-10-22',time:'10:30',description:'Diaria',repeat:'daily',completed:false});calendarSelected='2026-10-23';calendarView='week';refreshActivities();});
+  await page.locator('[data-activity-id="recurring"][data-activity-date="2026-10-23"]').click();
+  await page.locator('dialog[open] [data-complete-activity]').click();
+  assert.equal(await page.evaluate(()=>dayActivities('2026-10-23')[0].completed),true);
+  assert.equal(await page.evaluate(()=>dayActivities('2026-10-24')[0].completed),false);
+  assert.deepEqual(await page.evaluate(()=>activities[0].completedDates),['2026-10-23']);
+  await page.locator('.calendar-view [data-open-activity]').click();
+  await page.locator('dialog[open] input[name="description"]').fill('Semanal');
+  await page.locator('dialog[open] select[name="repeat"]').selectOption('weekly');
+  await page.locator('dialog[open] button[type="submit"]').click();
+  assert.equal(await page.evaluate(()=>activities.find(a=>a.description==='Semanal').repeat),'weekly');
+  await page.evaluate(()=>{page='acciones';sellers.splice(0,sellers.length,{n:'Comercio de prueba',e:'prueba@example.test',sourceValues:Array.from({length:71},(_,i)=>({0:'prueba@example.test',1:'Comercio de prueba',2:'Norte',3:'Centro',15:'12345'}[i]||''))});liveAssignments=[{id:'assignment',email:'prueba@example.test',commerce:'Comercio de prueba',action:'Visitar',color:'#ffe600'}];consultantSettings.actionColumns=['c62'];renderOperations();});
+  assert.equal(await page.locator('[data-op="columns"]').count(),0);
+  assert.equal(await page.getByRole('button',{name:'Etiquetas',exact:true}).count(),0);
+  assert.deepEqual(await page.locator('#action-results th').allTextContents(),['','Acción comercial','Mail','ID','Nombre comercio','Zona','Subzona']);
+  assert.match(await page.locator('#action-results').innerText(),/Comercio de prueba/);
+  for(const width of [1366,390]){await page.setViewportSize({width,height:900});await page.screenshot({path:`tests/actions-${width}.png`,fullPage:true});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
   assert.deepEqual(errors,[]);
-  console.log('PASS: monthly floating day details, no breadcrumb/below-calendar list, weekly seven-day time columns and collision lanes, activity create/edit/complete/delete, empty-day creation, scroll preservation and 1366/768/390/320 responsive views; no browser errors or real writes.');
+  console.log('PASS: monthly floating day details, no breadcrumb/below-calendar list, weekly seven-day time columns and compact time rows, activity create/edit/complete/delete, empty-day creation, recurrence completion and persistence and 1366/768/390/320 responsive views; no browser errors or real writes.');
  }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

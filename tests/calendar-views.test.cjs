@@ -9,7 +9,7 @@ const rows=[
  {id:'early',date:'2026-10-19',time:'00:00',description:'Primera hora',completed:false},
  {id:'outside',date:'2026-11-10',time:'12:00',description:'Otro mes',completed:false}
 ];
-const ctx=vm.createContext({Intl,Date,todayKey:'2026-10-22',page:'agenda',activities:rows,escapeHtml,icon:()=>''});
+const ctx=vm.createContext({activitiesOnDate:require('../dist/home.js').activitiesOnDate,Intl,Date,todayKey:'2026-10-22',page:'agenda',activities:rows,escapeHtml,icon:()=>''});
 vm.runInContext(fs.readFileSync('dist/calendar.js','utf8').replace(/\r\n/g,'\n').split('\n{\n')[0],ctx);
 const run=s=>vm.runInContext(s,ctx),before=JSON.stringify(rows);
 run(`calendarSelected='2026-10-22';calendarView='month';`);
@@ -22,7 +22,7 @@ assert.ok(monthly.includes('calendar-access-message'));
 assert.ok(!monthly.includes('data-activity-id='),'Monthly details belong only in the existing floating dialog');
 run(`calendarView='week'`);
 const weekly=run('agendaScreen()');
-assert.ok(weekly.includes('calendar-week-scroll'));
+assert.ok(weekly.includes('calendar-week-compact'));
 assert.ok(!weekly.includes('calendar-activities'));
 assert.equal((weekly.match(/data-calendar-date=/g)||[]).length,7);
 assert.equal((weekly.match(/data-activity-id=/g)||[]).length,6);
