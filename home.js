@@ -37,7 +37,7 @@ function parsePortfolioRows(values,mapping){
  return rows;
 }
 function activityOccursOn(a,key){
- if(key<a.date)return false;if(key===a.date)return true;if(a.repeat==='daily')return true;
+ if(key<a.date||a.excludedDates?.includes(key)||(a.repeatBefore&&key>=a.repeatBefore))return false;if(key===a.date)return true;if(a.repeat==='daily')return true;
  const start=new Date(a.date+'T12:00:00Z'),date=new Date(key+'T12:00:00Z');
  if(a.repeat==='weekly')return (date-start)/86400000%7===0;
  const day=Math.min(start.getUTCDate(),new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,0)).getUTCDate());

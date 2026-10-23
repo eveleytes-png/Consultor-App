@@ -69,3 +69,8 @@
  .calendar-week-cell .calendar-week-event{grid-column:2;padding:5px 7px}
  .calendar-week-cell .calendar-week-event strong{font-size:11px;overflow-wrap:normal}
 }
+
+/* Override the older overdue marker rule as well as ordinary pending dates. */
+.calendar-view .calendar-day.is-overdue .calendar-dot.pending{background:var(--yellow)}
+.calendar-view .calendar-dot.upcoming,.calendar-day-dialog .calendar-dot.upcoming{background:var(--cyan)}
+.calendar-view .calendar-legend{flex-wrap:wrap;gap:12px 20px}

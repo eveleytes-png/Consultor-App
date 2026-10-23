@@ -13,3 +13,17 @@ assert.equal(activitiesOnDate([done],'2026-02-01')[0].completed,true);
 assert.equal(activitiesOnDate([done],'2026-02-02')[0].completed,false);
 assert.deepEqual(activitiesOnDate([{...base,completed:true}],'2026-02-01'),[]);
 console.log('PASS: daily/weekly/monthly/yearly recurrence, month ends, leap years, independent completion, no mutations.');
+
+for(const repeat of ['daily','weekly','monthly','yearly']){
+ const series={...base,repeat,excludedDates:['2026-01-31']};
+ assert.equal(activitiesOnDate([series],'2026-01-31').length,0);
+ const cutoff={...base,repeat,repeatBefore:'2026-01-31'};
+ assert.equal(activitiesOnDate([cutoff],'2026-01-31').length,0);
+ assert.equal(activitiesOnDate([cutoff],'2030-01-31').length,0);
+}
+const bounded={...base,repeat:'daily',repeatBefore:'2026-02-03',excludedDates:['2026-02-01']};
+assert.equal(activitiesOnDate([bounded],'2026-01-31').length,1);
+assert.equal(activitiesOnDate([bounded],'2026-02-01').length,0);
+assert.equal(activitiesOnDate([bounded],'2026-02-02').length,1);
+assert.equal(activitiesOnDate([bounded],'2026-02-03').length,0);
+console.log('PASS: single occurrence exclusions and exclusive following cutoff preserve earlier dates for every recurrence frequency.');
