@@ -1,0 +1,99 @@
+/* v0 presentation, scoped exclusively to Mi cartera. Shared navigation is untouched. */
+#app>main.cartera-view{--cartera-ink:#172033;--cartera-muted:#68758a;--cartera-line:#dfe4ec;--cartera-purple:#5546ff;--cartera-soft:#f0eeff;color:var(--cartera-ink);background:transparent;min-width:0}
+.cartera-view .cartera-toolbar{display:grid;grid-template-columns:156px minmax(0,1fr) auto;align-items:center;gap:12px;margin:12px 0 0;padding:0}
+.cartera-view .cartera-toolbar>.segmented{display:flex;gap:0;background:#e9ebf2;padding:4px;border:0;border-radius:13px;min-height:48px}
+.cartera-view .cartera-toolbar>.segmented button{flex:1;display:block;border:0;background:transparent;border-radius:10px;height:40px;min-height:40px;padding:0 15px;color:#66758c;font-size:13px;font-weight:400;box-shadow:none}
+.cartera-view .cartera-toolbar>.segmented button.selected{background:#fff;color:var(--cartera-purple);box-shadow:0 1px 4px #d9dce5}
+.cartera-view #seller-search{width:100%;min-width:0;height:46px;min-height:46px;border:1px solid #d9dee8;border-radius:12px;background:#fff;color:var(--cartera-ink);font-size:14px;padding:0 15px 0 40px;box-shadow:none;order:initial;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='1.6'%3E%3Ccircle cx='10' cy='10' r='6.5'/%3E%3Cpath d='m15 15 5 5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:14px center}
+.cartera-view #seller-search::placeholder{color:#65748a;opacity:1}
+.cartera-view .cartera-toolbar>[data-op="seller-filters"],.cartera-view .portfolio-tools>button{display:inline-flex;justify-content:center;align-items:center;gap:9px;min-height:40px;height:40px;margin:0;padding:0 16px;border:1px solid #d7dce6;border-radius:10px;background:#fff;color:#111b2b;box-shadow:none;font-size:13px;font-weight:700;white-space:nowrap}
+.cartera-view .cartera-toolbar svg,.cartera-view .portfolio-tools svg{width:17px;height:17px;stroke-width:1.6}
+.cartera-view .portfolio-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:22px 0 0;padding:0}
+.cartera-view .portfolio-tools .location-status,.cartera-view .portfolio-tools .tool-unavailable{flex-basis:100%;font-size:12px;line-height:1.5;color:var(--cartera-muted)}
+.cartera-view .portfolio-tools .location-status:empty{display:none}
+.cartera-view .portfolio-tools>button:disabled{opacity:.5;cursor:default}
+.cartera-view .cartera-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:22px 0 18px}
+.cartera-view .cartera-stats>div{background:#fff;border:1px solid var(--cartera-line);border-radius:12px;padding:14px 16px;min-height:82px}
+.cartera-view .cartera-stats strong{display:block;color:var(--cartera-ink);font-size:22px;font-weight:700;line-height:1.5}
+.cartera-view .cartera-stats span{display:block;margin-top:4px;color:var(--cartera-muted);font-size:11px;line-height:1.5}
+.cartera-view .cartera-stats small{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.cartera-view #seller-results:has(.geographic-wrapper)>.cartera-stats{display:none}
+.cartera-view #seller-results>.count{font-size:12px;color:#687990;margin:0 0 14px}
+#app>main.cartera-view #seller-results .live-seller{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:0 24px;min-height:130px;padding:17px 20px;margin:0 0 12px;border:1px solid #dce2ea;border-radius:15px;background:#fff;box-shadow:0 1px 2px #14203404}
+.cartera-view #seller-results .live-seller>.seller-body{grid-column:1;grid-row:1;min-width:0;padding:0}
+.cartera-view .live-seller .seller-name-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0;min-height:21px}
+.cartera-view .live-seller .seller-name-actions>strong{font-size:14px;line-height:1.5;color:#111a29;font-weight:400;margin:0;overflow-wrap:anywhere}
+.cartera-view .live-seller .seller-name-actions>.chips{flex-basis:100%;gap:6px}
+.cartera-view .live-seller .seller-name-actions>.chips:empty{display:none}
+.cartera-view .live-seller .action-pill{font-size:10px;padding:3px 7px;min-height:0}
+.cartera-view .cartera-status{display:inline-flex;gap:6px;align-items:center;font-size:10px;line-height:1.5;color:var(--cartera-muted);font-weight:400}
+.cartera-view .cartera-status i{width:8px;height:8px;border-radius:50%;flex-shrink:0;order:-1}
+.cartera-view #seller-results .live-seller>.mail{grid-column:1;grid-row:2;display:flex;align-items:center;gap:17px;font-size:13px;line-height:1.5;color:#61718a;margin:5px 0 0;overflow-wrap:anywhere;min-width:0;padding:0}
+.cartera-view .live-seller>.mail button{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--cartera-purple);background:transparent;border:0;padding:0;min-width:24px;min-height:24px;width:24px;height:24px;border-radius:5px}
+.cartera-view .live-seller>.mail svg{width:16px;height:16px}
+.cartera-view #seller-results .live-seller>.seller-additional{grid-column:1;grid-row:3;font-size:11px;line-height:1.5;color:#8792a2;margin-top:6px;padding:0;overflow-wrap:anywhere}
+.cartera-view .live-seller>.cartera-meta{grid-column:1;grid-row:4;display:flex;flex-wrap:wrap;gap:6px 18px;color:#687990;font-size:11px;line-height:1.5;margin-top:12px;min-width:0}
+.cartera-view .cartera-meta>span{overflow-wrap:anywhere;max-width:100%}
+.cartera-view .cartera-meta>span:last-child{color:#8792a2}
+.cartera-view #seller-results .live-seller>.seller-contact-row{grid-column:2;grid-row:1/5;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:10px;align-self:center;margin:0;padding:0;min-width:0;border:0}
+.cartera-view .live-seller .seller-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;margin:0;padding:0;border:0}
+.cartera-view .live-seller .seller-actions>a,.cartera-view .live-seller .seller-actions>button{display:grid;place-items:center;width:42px;height:42px;min-width:42px;min-height:42px;border:1px solid #e1e5ec;background:#fff;border-radius:11px;color:var(--cartera-purple);padding:0;box-shadow:none}
+.cartera-view .live-seller .seller-actions>button:disabled{background:#f7f8fa;color:#c7ccd5;opacity:1}
+.cartera-view .live-seller .seller-actions svg{width:19px;height:19px}
+.cartera-view .live-seller .survey-buttons{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin:0;padding:0}
+.cartera-view .live-seller .survey-buttons>a,.cartera-view .live-seller .survey-buttons>button{display:inline-flex;align-items:center;justify-content:center;background:var(--cartera-soft);color:var(--cartera-purple);height:44px;min-height:44px;border:0;border-radius:11px;padding:0 13px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.4;font-weight:700;text-decoration:none;white-space:nowrap;margin:0}
+.cartera-view .legend{display:flex;flex-wrap:wrap;gap:10px 19px;font-size:12px;line-height:1.5;color:#586b83;margin:16px 0 15px}
+.cartera-view .legend span:before{width:9px;height:9px;margin-right:7px}
+.cartera-view .map-results-summary{display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;margin:18px 0 14px;color:#51647c;font-size:12px;line-height:1.5;padding:0}
+.cartera-view .map-results-summary>span:first-child{font-weight:700;color:#405574}
+.cartera-view .map-unlocated{border:0;background:transparent;color:var(--cartera-purple);font-size:12px;min-height:32px;padding:0}
+.cartera-view .geographic-wrapper{border:1px solid #dce2e8;border-radius:17px;overflow:hidden;min-height:500px;margin:0;background:#f5f7fa}
+.cartera-view .geographic-map{height:500px;min-height:500px}
+.cartera-view .geographic-wrapper .leaflet-control-layers{border:0;border-radius:9px;padding:11px 14px;box-shadow:0 2px 10px #b3bdc966;color:#172033;font:700 13px Arial,Helvetica,sans-serif}
+.cartera-view .geographic-wrapper .leaflet-control-layers label{margin:0;line-height:1.7}
+.cartera-view .geographic-wrapper .leaflet-bar{border-color:#d5dae0;box-shadow:none;border-radius:6px;overflow:hidden}
+.cartera-view .geographic-wrapper .leaflet-bar a,.cartera-view .geographic-wrapper .leaflet-bar button{color:#172033;background:white}
+.cartera-view .map-selected-card .live-seller{max-height:44dvh;overflow:auto}
+.cartera-view .map-selected-card .live-seller>.seller-contact-row{grid-column:1;grid-row:auto;align-items:stretch;margin-top:12px}
+.cartera-view .map-selected-card .live-seller{grid-template-columns:minmax(0,1fr);padding-right:40px!important}
+.cartera-view .map-selected-card .survey-buttons>a,.cartera-view .map-selected-card .survey-buttons>button{white-space:normal}
+.cartera-view :is(button,a,input):focus-visible{outline:2px solid var(--cartera-purple);outline-offset:3px}
+dialog.cartera-filters{border:1px solid #dfe4ec;border-radius:15px;color:#172033;font-family:Arial,Helvetica,sans-serif}
+dialog.cartera-filters h2{font-size:22px;font-weight:400;letter-spacing:-.03em}
+dialog.cartera-filters h3{font-size:14px;font-weight:700}
+dialog.cartera-filters .filter-menu button{font-size:12px;color:#68758a;border-radius:8px}
+dialog.cartera-filters .filter-menu button.active{color:#5546ff;background:#f0eeff}
+dialog.cartera-filters .filter-radio{background:white;border-color:#dfe4ec;border-radius:9px;font-size:12px}
+dialog.cartera-filters input{accent-color:#5546ff}
+dialog.cartera-filters .primary{background:#5546ff;color:white;border-color:#5546ff;border-radius:10px}
+@media(max-width:1100px){
+ .cartera-view .live-seller .survey-buttons{max-width:220px}
+ .cartera-view #seller-results .live-seller{column-gap:16px}
+ .cartera-view .live-seller .survey-buttons>a,.cartera-view .live-seller .survey-buttons>button{font-size:11px;padding:0 10px}
+}
+@media(max-width:800px){
+ .cartera-view .cartera-toolbar{grid-template-columns:minmax(0,1fr) auto;gap:12px;margin-top:0}
+ .cartera-view .cartera-toolbar>.segmented{grid-column:1/-1;max-width:220px;min-width:156px;justify-self:start}
+ .cartera-view #seller-search{min-width:0;grid-row:2;grid-column:1;font-size:13px}
+ .cartera-view .cartera-toolbar>[data-op="seller-filters"]{grid-row:2;grid-column:2;padding:0 12px}
+ .cartera-view .portfolio-tools{gap:8px;margin-top:22px}
+ .cartera-view .portfolio-tools>button{font-size:12px;padding:0 12px;min-height:42px;height:42px}
+ .cartera-view .cartera-stats{grid-template-columns:repeat(2,minmax(0,1fr));margin:22px 0 18px}
+ #app>main.cartera-view #seller-results .live-seller{grid-template-columns:minmax(0,1fr);gap:0;min-height:0;padding:17px 18px}
+ .cartera-view #seller-results .live-seller>.seller-body{min-width:0;grid-column:1}
+ .cartera-view #seller-results .live-seller>.mail{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;word-break:break-word}
+ .cartera-view #seller-results .live-seller>.seller-contact-row{grid-column:1;grid-row:5;display:flex;align-items:stretch;width:100%;margin-top:18px;gap:10px}
+ .cartera-view .live-seller .seller-actions{justify-content:flex-end}
+ .cartera-view .live-seller .survey-buttons{width:100%;max-width:none}
+ .cartera-view .live-seller .survey-buttons>a,.cartera-view .live-seller .survey-buttons>button{flex:1;min-width:0;padding:0 8px;font-size:11px;white-space:normal;text-align:center}
+ .cartera-view .live-seller>.cartera-meta{gap:8px 14px;margin-top:12px}
+ .cartera-view .geographic-wrapper,.cartera-view .geographic-map{height:420px;min-height:420px}
+ .cartera-view .map-selected-card .live-seller{padding:14px 36px 14px 14px!important}
+}
+@media(max-width:370px){
+ .cartera-view .cartera-toolbar{gap:8px}
+ .cartera-view #seller-search{padding-left:34px;background-position:10px center;font-size:12px}
+ .cartera-view .cartera-toolbar>[data-op="seller-filters"]{padding:0 10px;font-size:12px;gap:6px}
+ .cartera-view .cartera-stats>div{padding:12px}
+ .cartera-view .geographic-wrapper,.cartera-view .geographic-map{height:350px;min-height:350px}
+}
