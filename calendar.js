@@ -33,8 +33,8 @@ function calendarDayDialog(){const d=opDialog(calendarLabel(calendarSelected),`<
 
 // Preserve the weekly scroll position across the app's existing refreshes.
 {
- let weekElement=null,weekViewport={top:8*72,left:0};
- document.addEventListener('scroll',e=>{if(e.target?.matches?.('.calendar-week-scroll'))weekViewport={top:e.target.scrollTop,left:e.target.scrollLeft};},true);
- const restoreWeekScroll=()=>{const el=document.querySelector('main .calendar-week-scroll');if(el&&el!==weekElement){weekElement=el;el.scrollTop=weekViewport.top;el.scrollLeft=weekViewport.left;}};
+ let weekElement=null,weekViewport={top:8*72,left:null,width:0};
+ document.addEventListener('scroll',e=>{if(e.target?.matches?.('.calendar-week-scroll'))weekViewport={top:e.target.scrollTop,left:e.target.scrollLeft,width:e.target.clientWidth};},true);
+ const restoreWeekScroll=()=>{const el=document.querySelector('main .calendar-week-scroll');if(el&&el!==weekElement){weekElement=el;const selected=el.querySelector('.calendar-week-date.is-selected'),centerSelected=weekViewport.left===null||weekViewport.width!==el.clientWidth;el.scrollTop=weekViewport.top;el.scrollLeft=centerSelected&&selected?Math.max(0,selected.offsetLeft-56-(el.clientWidth-56-selected.offsetWidth)/2):(weekViewport.left||0);weekViewport={top:el.scrollTop,left:el.scrollLeft,width:el.clientWidth};}};
  new MutationObserver(restoreWeekScroll).observe(document.querySelector('main'),{childList:true,subtree:true});restoreWeekScroll();
 }

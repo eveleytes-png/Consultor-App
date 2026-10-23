@@ -25,8 +25,8 @@
 .calendar-view .calendar-access-message:empty{display:none}
 .calendar-view .calendar-access-message:not(:empty){margin:0 0 20px}
 .calendar-view .calendar-week-scroll{height:min(620px,70dvh);max-width:100%;overflow:auto;border:1px solid var(--line);border-radius:12px;overscroll-behavior:contain;scrollbar-width:thin;position:relative;background:#fff}
-.calendar-view .calendar-week-board{min-width:1036px;position:relative}
-.calendar-view .calendar-week-head,.calendar-view .calendar-week-body{display:grid;grid-template-columns:56px repeat(7,minmax(140px,1fr))}
+.calendar-view .calendar-week-board{min-width:826px;position:relative}
+.calendar-view .calendar-week-head,.calendar-view .calendar-week-body{display:grid;grid-template-columns:56px repeat(7,minmax(110px,1fr))}
 .calendar-view .calendar-week-head{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line)}
 .calendar-view .calendar-week-time-head{position:sticky;left:0;z-index:7;background:#f5f6f8;display:grid;place-items:center;color:var(--muted);font-size:10px;border-right:1px solid var(--line)}
 .calendar-view .calendar-week-date{height:62px;background:#fff;border:0;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font:400 11px Arial,Helvetica,sans-serif;color:var(--muted);border-radius:0}
