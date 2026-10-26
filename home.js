@@ -30,7 +30,9 @@ function parsePortfolioRows(values,mapping){
   const s={n:'',a:[],sourceRow:rows.length+2,sourceValues:row.map(v=>String(v??''))};
   for(const [key,col] of Object.entries(mapping))s[key]=col<0?'':String(row[col]??'');
   if(!s.e&&!s.id&&!s.n)continue;
-  if(!s.id||!s.e)throw Error('Cada comercio necesita ID y Mail.');
+  if(!s.e)throw Error('Cada comercio necesita Mail.');
+  s.hasMerchantId=!!String(s.id||'').trim();
+  if(!s.hasMerchantId)s.id='sheet-mail:'+normalizeAnswer(s.e);
   if(ids.has(s.id)||mails.has(normalizeAnswer(s.e)))throw Error('Hay IDs o mails repetidos en la cartera. Corregilos en Sheets.');
   ids.add(s.id);mails.add(normalizeAnswer(s.e));rows.push(s);
  }
