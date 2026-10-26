@@ -9,7 +9,7 @@ class MemoryStore{
  async update(owner,mutate){const next=structuredClone(this.state),result=mutate(next);this.state=next;return result;}
  async call(){return [{data:{activities:this.agenda}}];}
 }
-const env={AUTH_ALLOWED_EMAILS:'owner@example.com',AUTH_SECRET:'a'.repeat(32),APP_ORIGIN:'https://example.com',TELEGRAM_BOT_USERNAME:'test_bot',TELEGRAM_WEBHOOK_SECRET:'secret',NOTIFICATION_CRON_SECRET:'cron-secret'};
+const env={CONSULTOR_REQUIRE_LOGIN:"true",AUTH_ALLOWED_EMAILS:'owner@example.com',AUTH_SECRET:'a'.repeat(32),APP_ORIGIN:'https://example.com',TELEGRAM_BOT_USERNAME:'test_bot',TELEGRAM_WEBHOOK_SECRET:'secret',NOTIFICATION_CRON_SECRET:'cron-secret'};
 function setup(){
  const store=new MemoryStore(),sent=[];
  const providers={emailConfigured:true,telegramConfigured:true,configureTelegramWebhook:async()=>true,email:async(...a)=>{sent.push(['email',...a]);return 'email-id';},telegram:async(...a)=>{sent.push(['telegram',...a]);return 'telegram-id';}};

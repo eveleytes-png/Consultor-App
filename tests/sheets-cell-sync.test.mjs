@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {createHandler} from '../api/sheets.mjs';
-const env={GOOGLE_SELLER_WRITES_ENABLED:"true",GOOGLE_SERVICE_ACCOUNT_EMAIL:'test',GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:'test',AUTH_SECRET:'test-only-secret-at-least-32-characters',AUTH_ALLOWED_EMAILS:'owner@example.com'};
+const env={CONSULTOR_REQUIRE_LOGIN:"true",GOOGLE_SELLER_WRITES_ENABLED:"true",GOOGLE_SERVICE_ACCOUNT_EMAIL:'test',GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:'test',AUTH_SECRET:'test-only-secret-at-least-32-characters',AUTH_ALLOWED_EMAILS:'owner@example.com'};
 const origin='https://consultor-app.vercel.app';
 const headers=Array.from({length:16},(_,i)=>i===15?'Cust_id comercio':i===0?'Mail':'Column '+i);
 let rows=[headers,['mail@example.com',...Array(14).fill(''),'123']],writes=[],locked=false,marked=false;

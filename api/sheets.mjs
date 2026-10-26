@@ -11,7 +11,8 @@ const fail=(message,status=400)=>Object.assign(new Error(message),{status});
 const b64=value=>Buffer.from(value).toString('base64url');
 export function sellerCellValue(column,value){return column>=7&&value.startsWith('=')?{formulaValue:value}:{stringValue:value};}
 function config(env){return {email:env.GOOGLE_SERVICE_ACCOUNT_EMAIL,key:env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g,'\n'),secret:env.AUTH_SECRET,client:env.AUTH_GOOGLE_ID||CLIENT,origin:env.APP_ORIGIN||'https://consultor-app.vercel.app',allowed:(env.AUTH_ALLOWED_EMAILS||'eveleytes@gmail.com').split(',').map(v=>v.trim().toLowerCase()).filter(Boolean)};}
-function configured(c){return !!(c.email&&c.key&&c.secret?.length>=32&&c.allowed.length);}
+const loginRequired=env=>env.CONSULTOR_REQUIRE_LOGIN==='true';
+function configured(c,requireLogin=false){return !!(c.email&&c.key&&c.allowed.length&&(!requireLogin||c.secret?.length>=32));}
 function session(cookie,c){try{const raw=(cookie||'').split(';').map(v=>v.trim()).find(v=>v.startsWith(COOKIE+'='))?.slice(COOKIE.length+1);if(!raw)return null;const parts=raw.split('.');if(parts.length!==2)return null;const signature=createHmac('sha256',c.secret).update(parts[0]).digest(),supplied=Buffer.from(parts[1],'base64url');if(signature.length!==supplied.length||!timingSafeEqual(signature,supplied))return null;const value=JSON.parse(Buffer.from(parts[0],'base64url'));return value.exp>Date.now()/1000&&c.allowed.includes(value.email)?value:null;}catch{return null;}}
 function cookieFor(email,c){const payload=b64(JSON.stringify({email,exp:Math.floor(Date.now()/1000)+7*86400}));return `${COOKIE}=${payload}.${createHmac('sha256',c.secret).update(payload).digest('base64url')}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`;}
 function authorizeOperation(path,body){
@@ -44,18 +45,19 @@ return async(req,res)=>{
  res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');
  const send=(status,value)=>res.status(status).json(value),c=config(env);
  try{
-  if(req.method==='GET'){return send(200,{configured:configured(c),authenticated:configured(c)&&!!session(req.headers.cookie,c),privateStateEnabled:!!(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY),clientId:c.client,sellerWritesEnabled:env.GOOGLE_SELLER_WRITES_ENABLED==='true'});}
+  if(req.method==='GET'){const required=loginRequired(env),ready=configured(c,required);return send(200,{configured:ready,authenticated:ready&&!!session(req.headers.cookie,c),loginRequired:required,connectionReady:ready&&!required,privateStateEnabled:!!(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY),clientId:c.client,sellerWritesEnabled:env.GOOGLE_SELLER_WRITES_ENABLED==='true'});}
   if(req.method!=='POST'){res.setHeader('Allow','GET, POST');return send(405,{error:'Método no permitido.'});}
-  if(!configured(c))return send(503,{error:'Falta configurar la conexión compartida en Vercel.'});
+  if(!configured(c,loginRequired(env)))return send(503,{error:'Falta configurar la conexión compartida en Vercel.'});
   if(req.headers.origin!==c.origin)throw fail('Origen no autorizado.',403);
   const body=typeof req.body==='string'?JSON.parse(req.body):req.body;if(!body||Buffer.byteLength(JSON.stringify(body))>2000000)throw fail('Solicitud inválida.');
   if(body.operation==='login'){
+   if(!c.secret||c.secret.length<32)throw fail('El ingreso individual todavía no está habilitado.',503);
    if(typeof body.credential!=='string'||body.credential.length>10000)throw fail('Credencial inválida.',401);
    let user;try{user=await verifyIdentity(body.credential,c.client);}catch{throw fail('No se pudo verificar la cuenta de Google.',401);}
    const email=user?.email?.trim().toLowerCase();if(!user?.email_verified||!c.allowed.includes(email))throw fail('Esta cuenta no está autorizada para Consultor App.',403);
    res.setHeader('Set-Cookie',cookieFor(email,c));return send(200,{authenticated:true});
   }
-  if(!session(req.headers.cookie,c))throw fail('Ingresá con tu cuenta de Google para consultar la planilla.',401);
+  if(loginRequired(env)&&!session(req.headers.cookie,c))throw fail('Ingresá con tu cuenta de Google para consultar la planilla.',401);
   if(body.operation==='logout'){res.setHeader('Set-Cookie',`${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);return send(200,{authenticated:false});}
   if(body.operation==='sellerCell'){
    if(Object.keys(body).some(k=>!['operation','sellerId','column'].includes(k))||typeof body.sellerId!=='string'||!body.sellerId||body.sellerId.length>200||!Number.isInteger(body.column)||body.column<0||body.column>14)throw fail('Solo se editan celdas de A a O.');
@@ -111,7 +113,8 @@ export function singleConsultant(env=process.env){
 }
 export function requireConsultant(req,env=process.env){
  const c=config(env),owner=singleConsultant(env),identity=session(req.headers.cookie,c);
- if(!identity||identity.email!==owner)throw fail('Ingresá con la cuenta autorizada.',401);
+ if(loginRequired(env)){if(!identity||identity.email!==owner)throw fail('Ingresá con la cuenta autorizada.',401);}
+ else if(!configured(c))throw fail('Falta configurar la conexión compartida en Vercel.',503);
  if(req.method!=='GET'&&req.headers.origin!==c.origin)throw fail('Origen no autorizado.',403);
  return owner;
 }

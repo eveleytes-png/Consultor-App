@@ -14,7 +14,7 @@ test('El almacenamiento aplica CAS incluso con dos escrituras concurrentes',asyn
  await Promise.all([store.update(row.owner,s=>{s.count++;}),store.update(row.owner,s=>{s.count++;})]);assert.equal(row.state.count,2);assert.equal(row.revision,2);
 });
 test('Estado privado: requiere sesión y origen; no acepta tablas o RPC arbitrarios',async()=>{
- const env={AUTH_ALLOWED_EMAILS:'owner@example.com',AUTH_SECRET:'s'.repeat(32),GOOGLE_SERVICE_ACCOUNT_EMAIL:'test',GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:'test',APP_ORIGIN:'https://example.com'};
+ const env={CONSULTOR_REQUIRE_LOGIN:"true",AUTH_ALLOWED_EMAILS:'owner@example.com',AUTH_SECRET:'s'.repeat(32),GOOGLE_SERVICE_ACCOUNT_EMAIL:'test',GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:'test',APP_ORIGIN:'https://example.com'};
  const login=createHandler({env,verifyIdentity:async()=>({email:'owner@example.com',email_verified:true})});
  const invoke=async(handler,body,cookie='',origin=env.APP_ORIGIN)=>{const h={},res={setHeader(k,v){h[k]=v;},status(n){this.code=n;return this;},json(v){this.data=v;}};await handler({method:'POST',headers:{origin,cookie},body},res);return {...res,headers:h};};
  const session=await invoke(login,{operation:'login',credential:'test'}),cookie=session.headers['Set-Cookie'];let calls=0;
