@@ -20,7 +20,7 @@ assert.equal(fastSellerDetail(first,[...headers,'Cust_id comercio']).url,null);
 const source=fs.readFileSync('customization.js','utf8');
 const markup=source.slice(source.indexOf('const fast=window.consultorFastSellerDetail'),source.indexOf("const title=summary.querySelector"));
 assert(markup.includes("summary.querySelector('.survey-buttons').insertAdjacentHTML('beforeend'"));
-assert(markup.includes('class="mini" data-fast-detail href="${opEscape(fast.url)}"'));
+assert(markup.includes('class="mini" data-fast-detail ${window.ConsultorMercadoPago.attributes(fast.url)}'));
 assert(markup.includes('disabled title="Cust ID no disponible"'));assert(!/target=|window.open|setTimeout/.test(markup));
 assert(!source.includes('<div data-detail-body><div class="detail-tools">${fast.url?'));
 console.log('PASS: two Android-verified Cust IDs and switching back; exact route and parameters; no businessId; missing/invalid IDs disabled; mini action beside survey buttons, direct anchor.');
