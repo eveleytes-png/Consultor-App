@@ -5,14 +5,14 @@ const origin='https://consultor-app.vercel.app';
 const headers=Array.from({length:16},(_,i)=>i===15?'Cust_id comercio':i===0?'Mail':'Column '+i);
 let rows=[headers,['mail@example.com',...Array(14).fill(''),'123']],writes=[],locked=false,marked=false;
 const handler=createHandler({env,verifyIdentity:async()=>({email:'owner@example.com',email_verified:true}),lock:async method=>{if(method==='acquire'){if(locked)return false;locked=true;return true;}if(method==='mark'){marked=true;return true;}locked=false;return true;},googleRequest:async(c,path,body)=>{
- if(path.includes('batchGet'))return {valueRanges:body.dataFilters.map(f=>{const r=f.gridRange;let values=r.sheetId===0?structuredClone(rows):[];if(r.startColumnIndex!==undefined)values=values.slice(r.startRowIndex,r.endRowIndex).map(row=>row.slice(r.startColumnIndex,r.endColumnIndex));if(body.valueRenderOption!=='FORMULA')values=values.map(row=>row.map(v=>String(v).startsWith('=')?'calculated':v));return {dataFilters:[f],valueRange:{values}};})};
+ if(path.includes('batchGet'))return {valueRanges:body.dataFilters.map(f=>{const r=f.gridRange;let values=r.sheetId===192864634?structuredClone(rows):[];if(r.startColumnIndex!==undefined)values=values.slice(r.startRowIndex,r.endRowIndex).map(row=>row.slice(r.startColumnIndex,r.endColumnIndex));if(body.valueRenderOption!=='FORMULA')values=values.map(row=>row.map(v=>String(v).startsWith('=')?'calculated':v));return {dataFilters:[f],valueRange:{values}};})};
  writes.push(body);const u=body.requests[0].updateCells,v=u.rows[0].values[0].userEnteredValue;rows[u.range.startRowIndex][u.range.startColumnIndex]=v.formulaValue??v.stringValue;if(u.range.startColumnIndex===0)rows[u.range.startRowIndex][15]='789';return {};
 }});
 async function call(body,cookie=''){const response={setHeader(k,v){this[k]=v;},status(n){this.code=n;return this;},json(value){this.data=value;}};await handler({method:'POST',headers:{origin,cookie},body},response);return response;}
 const login=await call({operation:'login',credential:'test'});const cookie=login['Set-Cookie'];
 const edit=(column,value,expected='')=>({operation:'editSeller',sellerId:'123',column,value,expected,header:headers[column]});
 assert.equal((await call(edit(1,'new'),cookie)).code,200);assert.equal(writes.length,1);assert.equal(marked,true);assert.equal(locked,false);
-assert.deepEqual(writes[0].requests[0].updateCells.range,{sheetId:0,startRowIndex:1,endRowIndex:2,startColumnIndex:1,endColumnIndex:2});assert.equal(rows[1][15],'123');
+assert.deepEqual(writes[0].requests[0].updateCells.range,{sheetId:192864634,startRowIndex:1,endRowIndex:2,startColumnIndex:1,endColumnIndex:2});assert.equal(rows[1][15],'123');
 assert.equal((await call(edit(1,'overwrite'),cookie)).code,409);assert.equal(writes.length,1);
 for(const column of [15,16,62,-1])assert.equal((await call(edit(column,'forbidden'),cookie)).code,400);
 assert.equal((await call(edit(0,'','mail@example.com'),cookie)).code,400);

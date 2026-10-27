@@ -2,7 +2,7 @@
 import {createHmac,timingSafeEqual,randomUUID} from 'node:crypto';
 import {sheetLock} from './sheets-lock.mjs';
 const FILE='1yKyxi4zM3XBVc7-XY3gDZ9TiWrdpbnTdoOUq5p9n73E';
-const TABS={0:'BaseApp',500157585:'Points_ConsultoresApp',1266882678:'Links_ConsultoresApp'};
+const TABS={192864634:'Base Consultor App',500157585:'Points_ConsultoresApp',1266882678:'Links_ConsultoresApp'};
 const CLIENT='503544568734-pb0dmd3mud6in8eeiigvpps8v26u6s5v.apps.googleusercontent.com';
 const COOKIE='__Host-consultor-session';
 const META='?fields=spreadsheetId,properties(title),sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)))';
@@ -40,7 +40,7 @@ async function defaultIdentity(credential,client){const {OAuth2Client}=await imp
 async function defaultGoogle(c,path,body,mode){const {JWT}=await import('google-auth-library');const key=c.email+':'+mode;let auth=googleClients.get(key);if(!auth){auth=new JWT({email:c.email,key:c.key,scopes:['https://www.googleapis.com/auth/spreadsheets']});googleClients.set(key,auth);}const result=await auth.request({url:'https://sheets.googleapis.com/v4/spreadsheets/'+FILE+path,method:body?'POST':'GET',data:body,timeout:15000});return result.data;}
 export function createHandler({env=process.env,verifyIdentity=defaultIdentity,googleRequest=defaultGoogle,lock=sheetLock}={}){let snapshot=null,snapshotAt=0,snapshotPending=null,generation=0;
 const readValues=async(c,range,render='FORMATTED_VALUE')=>{const data=await googleRequest(c,'/values:batchGetByDataFilter',{dataFilters:[{gridRange:range}],majorDimension:'ROWS',valueRenderOption:render},'read');return data.valueRanges?.[0]?.valueRange?.values||[];};
-const rawCell=async(c,row,column)=>String((await readValues(c,{sheetId:0,startRowIndex:row,endRowIndex:row+1,startColumnIndex:column,endColumnIndex:column+1},'FORMULA'))[0]?.[0]??'');
+const rawCell=async(c,row,column)=>String((await readValues(c,{sheetId:192864634,startRowIndex:row,endRowIndex:row+1,startColumnIndex:column,endColumnIndex:column+1},'FORMULA'))[0]?.[0]??'');
 return async(req,res)=>{
  res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');
  const send=(status,value)=>res.status(status).json(value),c=config(env);
@@ -61,7 +61,7 @@ return async(req,res)=>{
   if(body.operation==='logout'){res.setHeader('Set-Cookie',`${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);return send(200,{authenticated:false});}
   if(body.operation==='sellerCell'){
    if(Object.keys(body).some(k=>!['operation','sellerId','column'].includes(k))||typeof body.sellerId!=='string'||!body.sellerId||body.sellerId.length>200||!Number.isInteger(body.column)||body.column<0||body.column>14)throw fail('Solo se editan celdas de A a O.');
-   const rows=await readValues(c,{sheetId:0,startRowIndex:0});const matches=rows.map((row,index)=>({row,index})).filter(r=>r.index>0&&String(r.row[15]??'')===body.sellerId);
+   const rows=await readValues(c,{sheetId:192864634,startRowIndex:0});const matches=rows.map((row,index)=>({row,index})).filter(r=>r.index>0&&String(r.row[15]??'')===body.sellerId);
    if(matches.length!==1)throw fail('No se encuentra un comercio único con ese ID.',409);
    return send(200,{value:await rawCell(c,matches[0].index,body.column),header:String(rows[0]?.[body.column]??'')});
   }
@@ -72,7 +72,7 @@ return async(req,res)=>{
    const owner=randomUUID();if(!await lock('acquire',owner))throw fail('Otro guardado está en curso o pendiente de confirmar. Actualizá antes de reintentar.',409);
    let writing=false,confirmed=false;
    try{
-    const read=()=>readValues(c,{sheetId:0,startRowIndex:0});
+    const read=()=>readValues(c,{sheetId:192864634,startRowIndex:0});
     const rows=await read();const idColumn=rows[0]?.findIndex(h=>String(h).trim().toLowerCase()==='cust_id comercio');
     if(idColumn!==15||String(rows[0]?.[column]??'')!==header)throw fail('Cambió la estructura de BaseApp. Actualizá antes de guardar.',409);
     const matches=rows.map((row,index)=>({row,index})).filter(r=>r.index>0&&String(r.row[idColumn]??'')===sellerId);
@@ -82,7 +82,7 @@ return async(req,res)=>{
     if(value===expected){confirmed=true;return send(200,{saved:true});}
     if(!await lock('mark',owner))throw fail('Venció la protección del guardado. No se modificó la planilla.',409);writing=true;
     generation++;snapshot=null;snapshotAt=0;snapshotPending=null;
-    try{await googleRequest(c,':batchUpdate',{requests:[{updateCells:{range:{sheetId:0,startRowIndex:index,endRowIndex:index+1,startColumnIndex:column,endColumnIndex:column+1},rows:[{values:[{userEnteredValue:sellerCellValue(column,value)}]}],fields:'userEnteredValue'}}]},'write');}
+    try{await googleRequest(c,':batchUpdate',{requests:[{updateCells:{range:{sheetId:192864634,startRowIndex:index,endRowIndex:index+1,startColumnIndex:column,endColumnIndex:column+1},rows:[{values:[{userEnteredValue:sellerCellValue(column,value)}]}],fields:'userEnteredValue'}}]},'write');}
     catch(error){if([400,401,403,404].includes(error.response?.status))confirmed=true;throw fail('No se pudo confirmar el guardado en Google. Revisá BaseApp antes de volver a guardar.',502);}
     const after=await read();if((column!==0&&String(after[index]?.[15]??'')!==sellerId)||await rawCell(c,index,column)!==value)throw fail('Google recibió el cambio, pero el dato volvió a cambiar. Revisá BaseApp antes de reintentar.',409);
     confirmed=true;return send(200,{saved:true});
@@ -92,7 +92,7 @@ return async(req,res)=>{
    if(Object.keys(body).some(k=>!['operation','fresh'].includes(k))||(body.fresh!==undefined&&typeof body.fresh!=='boolean'))throw fail('Solicitud inválida.');
    if(!body.fresh&&snapshot&&Date.now()-snapshotAt<4000)return send(200,snapshot);
    if(body.fresh||!snapshotPending){const version=generation;const pending=googleRequest(c,'/values:batchGetByDataFilter',{dataFilters:Object.keys(TABS).map(id=>({gridRange:{sheetId:Number(id),startRowIndex:0}})),majorDimension:'ROWS',valueRenderOption:'FORMATTED_VALUE'},'read').then(data=>{
-    const result={};for(const [id,key] of [[0,'portfolio'],[500157585,'stock'],[1266882678,'links']]){const range=data.valueRanges?.find(r=>r.dataFilters?.some(f=>f.gridRange&&(f.gridRange.sheetId??0)===id));if(!range)throw fail('Google no devolvió todas las pestañas configuradas.',502);result[key]=range.valueRange?.values||[];}
+    const result={};for(const [id,key] of [[192864634,'portfolio'],[500157585,'stock'],[1266882678,'links']]){const range=data.valueRanges?.find(r=>r.dataFilters?.some(f=>f.gridRange&&(f.gridRange.sheetId??0)===id));if(!range)throw fail('Google no devolvió todas las pestañas configuradas.',502);result[key]=range.valueRange?.values||[];}
     if(version===generation){snapshot=result;snapshotAt=Date.now();}return result;
    });snapshotPending=pending;pending.finally(()=>{if(snapshotPending===pending)snapshotPending=null;}).catch(()=>{});}
    return send(200,await snapshotPending);
