@@ -89,3 +89,15 @@ test('Proveedores: texto plano, claves privadas y clasificación conservadora',a
  const timeout=createProviders({RESEND_API_KEY:'private',NOTIFICATION_FROM:'a@example.com'},async()=>{throw Error('timeout');});await assert.rejects(()=>timeout.email('b','c','d'),e=>e.kind==='uncertain');
  assert.equal(telegramParts('😀'.repeat(3000)).join(''),'😀'.repeat(3000));assert.ok(telegramParts('😀'.repeat(3000)).every(p=>p.length<=3500));
 });
+
+test('Telegram: un vínculo vencido se informa y no puede confirmarse',async()=>{
+ const x=setup();delete x.store.state.telegramChat;
+ x.store.state.pendingChat={id:'55',label:'Cuenta de prueba',expires:Date.now()-1000};
+ let status=await x.service.status('owner@example.com');
+ assert.equal(status.telegramPending,false);assert.equal(status.telegramExpired,true);assert.equal(status.telegramCandidate,null);
+ await assert.rejects(()=>x.service.confirmTelegram('owner@example.com'),/Abrí el enlace/);
+ assert.equal(x.store.state.telegramChat,undefined);
+ x.store.state.pendingChat.expires=Date.now()+60000;
+ status=await x.service.status('owner@example.com');
+ assert.equal(status.telegramPending,true);assert.equal(status.telegramExpired,false);assert.equal(status.telegramCandidate.id,'55');
+});
