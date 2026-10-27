@@ -1,0 +1,32 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {fastSellerDetail}=require('../fast-detail.js');
+const headers=['Mail','Cust_id comercio','businessId'];
+const first={id:'internal-first',sourceValues:['first@example.test','123456789','7654321']};
+const second={id:'internal-second',sourceValues:['second@example.test','987654321','1234567']};
+for(const seller of [first,second,first]){
+ const result=fastSellerDetail(seller,headers),deep=new URL(result.url),inner=new URL(deep.searchParams.get('url'));
+ assert.equal(inner.searchParams.get('custId'),seller.sourceValues[1]);
+ assert.equal(inner.searchParams.get('businessId'),seller.sourceValues[2]);
+ assert.equal(deep.searchParams.get('OPV'),'fend');
+ assert.equal(deep.searchParams.get('webkit-engine'),'2');
+ assert.equal(deep.searchParams.get('collaborator_validation_mode'),'fend');
+ assert.equal(deep.searchParams.get('hides_bottom_bar'),'true');
+ assert.equal(deep.searchParams.get('use_web_title'),'true');
+ assert(result.url.endsWith(encodeURIComponent(inner.href)));
+}
+assert.equal(fastSellerDetail(first,headers.slice(0,2)).url,null);
+assert.match(fastSellerDetail(first,headers.slice(0,2)).reason,/businessId/);
+assert.equal(fastSellerDetail({id:'123',businessId:'456',sourceValues:[]},headers).url,null);
+assert.equal(fastSellerDetail(first,['Mail','ID','businessId']).url,null);
+assert.equal(fastSellerDetail(first,['Mail','CUIT','businessId']).url,null);
+assert.equal(fastSellerDetail(first,['Mail','Cust_id_consultor','businessId']).url,null);
+assert.equal(fastSellerDetail({...first,sourceValues:['x','sheet-mail:x','456']},headers).url,null);
+assert.equal(fastSellerDetail(first,[...headers,'business_id']).url,null);
+assert.equal(fastSellerDetail({...first,sourceValues:['x','123','']},headers).url,null);
+const source=fs.readFileSync('customization.js','utf8');
+const markup=source.slice(source.indexOf('const fast=window.consultorFastSellerDetail'),source.indexOf("d.querySelector('[data-choose-detail]').onclick"));
+assert(markup.includes('href="${opEscape(fast.url)}"'));
+assert(markup.includes('disabled aria-describedby="fast-detail-reason"'));
+assert(!/target=|window.open|setTimeout/.test(markup));
+console.log('PASS: distinct seller IDs, all deep-link parameters, direct anchor, missing/ambiguous/invalid identifiers disabled, no internal-ID fallback or previous seller state.');
