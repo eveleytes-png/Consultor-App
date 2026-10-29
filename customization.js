@@ -37,7 +37,7 @@ sellerDetail=function(s){
   summary.querySelector('.seller-contact-row')?.remove();
   if(normalizeAnswer(s.survey)==='si')summary.querySelector('.chips')?.insertAdjacentHTML('afterbegin',actionPill('Encuesta válida','green'));
   const title=summary.querySelector('.seller-name-actions > strong');title.setAttribute('role','heading');title.setAttribute('aria-level','2');
-  const pencil=document.createElement('button');pencil.type='button';pencil.className='icon-action';pencil.setAttribute('aria-label','Editar datos del comercio');pencil.innerHTML=icon('pencil');title.after(pencil);pencil.onclick=()=>editSellerData(s,paint);
+  const edit=document.createElement('button');edit.type='button';edit.className='seller-detail-edit';edit.textContent='Editar ficha';edit.onclick=()=>editSellerData(s,paint);footer.append(edit);
   d.querySelector('.seller-detail-footer')?.remove();
   d.querySelector('[data-detail-body]')?.remove();d.insertAdjacentHTML('beforeend',`<div data-detail-body><div class="detail-grid">${visibleDetailColumns().map(key=>{const c=portfolioColumns.find(c=>c.key===key),v=columnValue(s,key);return c?`<div class="seller-field"><small>${opEscape(c.label)}</small><span${v.trim()?'':' class="muted"'}>${v.trim()?opEscape(v):'Sin información aún'}</span></div>`:'';}).join('')}</div><div class="detail-tools"><button type="button" class="detail-personalize" data-choose-detail>${icon('filter')}<strong>Personalizar datos visibles</strong><span>Ordená y elegí qué información mostrar</span></button></div></div>`);d.append(footer);d.querySelector('[data-choose-detail]').onclick=()=>chooseColumns('detailColumns',paint);
  }
