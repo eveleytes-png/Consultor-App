@@ -14,5 +14,6 @@ assert.equal(row.data.settings.profile.name,'Existing');assert.deepEqual(row.dat
 assert.equal((await save({kind:'card',title:'c0',additionalColumns:[]},3)).code,409);
 assert.equal((await save({kind:'card',title:'invalid',additionalColumns:[]})).code,400);
 assert.equal((await save({kind:'card',title:'c0',additionalColumns:['c1','c1']})).code,400);
+assert.equal((await save({kind:'card',title:'c0',additionalColumns:'c1'})).code,400);
 assert.equal(patches,1);
 console.log('PASS: multiple card fields persist with revision checks; profile, detail columns, sellers and operational data preserved; invalid/stale writes rejected.');
