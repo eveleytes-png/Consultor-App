@@ -1,0 +1,20 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+let html='';const scroller={scrollTop:0,offsetTop:0,addEventListener(){},querySelectorAll:()=>[]};const dialog={dataset:{},classList:{add(){}},addEventListener(){},querySelector:s=>s==='.filter-content'?scroller:{textContent:''},querySelectorAll:()=>[]};
+const ctx=vm.createContext({Intl,Date,console,escapeHtml:String,window:{},filterPanel(value){html=value;return dialog;}});
+vm.runInContext(fs.readFileSync('home.js','utf8')+fs.readFileSync('operations.js','utf8'),ctx);
+const run=s=>vm.runInContext(s,ctx);
+const older=(date,months,now='2026-10-28T12:00:00Z')=>run(`surveyOlderThan(${JSON.stringify(date)},${months},new Date(${JSON.stringify(now)}))`);
+assert(older('27/2/2026 (Encuesta 5 estrellas)',8));assert(!older('28/2/2026',8));assert(!older('1/3/2026',8));
+for(const months of [8,10,12,14,16,18])assert(older('1/1/2020',months));
+assert(older('2026-02-27',8));assert(!older('31/2/2026',8));assert(!older('',8));assert(!older('Sin información',8));assert(!older('28/10/2027',8));
+assert(!older('28/2/2025',8,'2025-10-31T12:00:00Z'));assert(older('27/2/2025',8,'2025-10-31T12:00:00Z'));
+assert(!older('29/2/2024',8,'2024-10-31T12:00:00Z'));assert(older('28/2/2024',8,'2024-10-31T12:00:00Z'));
+assert(!older('28/2/2026',8,'2026-10-29T01:00:00Z')); // Still October 28 in Buenos Aires.
+run(`const sellers=[{id:'1',n:'A',d:'1/1/2020',z:'Zárate',s:'Zona 10',a:[]},{id:'2',n:'B',d:'',z:'Álamo',s:'Zona 2',a:[]},{id:'3',n:'C',d:'1/1/2027',z:'Buenos Aires',s:'Álamo',a:[]}];icon=()=>'';`);
+assert.equal(run('filteredSellers().length'),3);run('sellerFilters.surveyAges.add("8");sellerFilters.surveyAges.add("18")');assert.equal(run('filteredSellers().map(s=>s.id).join()'),'1');assert.equal(run('filterCount()'),2);
+run('sellerFilterDialog()');assert.equal((html.match(/data-group="surveyAges"/g)||[]).length,6);assert(html.indexOf('id="f-survey-age"')<html.indexOf('id="f-actions"'));
+const zone=html.slice(html.indexOf('id="f-zones"'),html.indexOf('id="f-subzones"'));assert(zone.indexOf('value="Álamo"')<zone.indexOf('value="Buenos Aires"'));assert(zone.indexOf('value="Buenos Aires"')<zone.indexOf('value="Zárate"'));
+const sub=html.slice(html.indexOf('id="f-subzones"'));assert(sub.indexOf('value="Álamo"')<sub.indexOf('value="Zona 2"'));assert(sub.indexOf('value="Zona 2"')<sub.indexOf('value="Zona 10"'));
+run('let page="sellers";');vm.runInContext(fs.readFileSync('improvements.js','utf8').split('\n').slice(2,4).join('\n'),ctx);
+run('const saved=window.captureConsultorView();clearSellerFilters();window.restoreConsultorView(saved)');assert.equal(run('sellerFilters.surveyAges.size'),2);run('clearSellerFilters()');assert.equal(run('sellerFilters.surveyAges.size'),0);assert.equal(run('filterCount()'),0);
+console.log('PASS: strict calendar thresholds, month ends/leap years, Buenos Aires dates, annotations/invalid/missing/future dates, checkbox union, alphabetical zones/subzones, count/clear/history.');

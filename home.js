@@ -1,5 +1,20 @@
 // The same seller rows feed the list and the portfolio. No external data connection.
 function normalizeAnswer(value){return String(value??'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+// Compare calendar dates in Buenos Aires, including formatted Sheets annotations.
+function surveyOlderThan(value,months,now=new Date()){
+ const text=String(value??'').trim();
+ const local=/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?=$|\s|\()/.exec(text);
+ const iso=/^(\d{4})-(\d{2})-(\d{2})(?=$|T|\s)/.exec(text);
+ if(!local&&!iso)return false;
+ const [year,month,day]=local?[Number(local[3]),Number(local[2]),Number(local[1])]:[Number(iso[1]),Number(iso[2]),Number(iso[3])];
+ const date=new Date(Date.UTC(year,month-1,day));
+ if(date.getUTCFullYear()!==year||date.getUTCMonth()!==month-1||date.getUTCDate()!==day)return false;
+ const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'numeric',day:'numeric'}).formatToParts(now).map(p=>[p.type,p.value]));
+ const cutoff=new Date(Date.UTC(Number(parts.year),Number(parts.month)-1-Number(months),1));
+ const lastDay=new Date(Date.UTC(cutoff.getUTCFullYear(),cutoff.getUTCMonth()+1,0)).getUTCDate();
+ cutoff.setUTCDate(Math.min(Number(parts.day),lastDay));
+ return date.getTime()<cutoff.getTime();
+}
 // Shared opportunity vocabulary. Source cells remain unchanged.
 function portfolioOpportunity(value,product){
  const v=normalizeAnswer(value).replace(/\s+/g,' ');
