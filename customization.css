@@ -95,3 +95,4 @@ body:not(.connection-checked) main>*{display:none}body:not(.connection-checked) 
 .configured-detail>.seller-detail-footer .seller-detail-edit{margin-left:auto;display:flex;align-items:center;justify-content:center;min-height:50px;padding:12px 18px;border:1px solid #dfe4ef;border-radius:13px;background:#fff;color:#172033;font-size:14px;font-weight:700;line-height:1.35;cursor:pointer}
 .configured-detail>.seller-detail-footer .seller-detail-edit:hover{background:#fafaff;border-color:#c8cfe0}
 @media(max-width:600px){.configured-detail>.seller-detail-footer [data-fast-detail]{grid-column:auto}.configured-detail>.seller-detail-footer .seller-detail-edit{margin-left:0;width:100%;min-height:46px;padding:10px 8px;font-size:12px}}
+.live-seller .seller-name-actions>.chips:empty{display:none}

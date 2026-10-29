@@ -35,7 +35,6 @@ sellerDetail=function(s){
   const footer=summary.querySelector('.survey-buttons');footer.classList.add('seller-detail-footer');
   const contacts=summary.querySelector('.seller-actions');if(contacts)summary.append(contacts);
   summary.querySelector('.seller-contact-row')?.remove();
-  if(normalizeAnswer(s.survey)==='si')summary.querySelector('.chips')?.insertAdjacentHTML('afterbegin',actionPill('Encuesta válida','green'));
   const title=summary.querySelector('.seller-name-actions > strong');title.setAttribute('role','heading');title.setAttribute('aria-level','2');
   const edit=document.createElement('button');edit.type='button';edit.className='seller-detail-edit';edit.textContent='Editar ficha';edit.onclick=()=>editSellerData(s,paint);footer.append(edit);
   d.querySelector('.seller-detail-footer')?.remove();

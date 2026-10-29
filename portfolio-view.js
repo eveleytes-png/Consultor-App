@@ -31,13 +31,6 @@
   for(const card of root.querySelectorAll('.live-seller')){
    const seller=sellers.find(s=>String(s.id)===String(card.dataset.id));
    if(!seller)continue;
-   const heading=card.querySelector('.seller-name-actions');
-   if(heading&&!heading.querySelector('.cartera-status')){
-    const color=sellerColor(seller),labels={'#292932':'Sin aceptación','#288450':'Encuesta válida','#cf5058':'Sin encuesta válida','#8c8c9c':'Sin dato'};
-    const status=document.createElement('span');status.className='cartera-status';
-    status.innerHTML=`<i style="background:${color}" aria-hidden="true"></i>${escapeHtml(labels[color]||'Sin dato')}`;
-    heading.querySelector('strong')?.after(status);
-   }
    if(!card.querySelector('.cartera-meta')){
     const commentIndex=portfolioHeaders.findIndex(h=>normalizeAnswer(h)==='comentarios');
     const comment=commentIndex>=0?String(seller.sourceValues?.[commentIndex]??'').trim():'';
