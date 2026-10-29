@@ -25,7 +25,7 @@ export function createStateHandler({env=process.env,store=new NotificationStore(
    if(b.path==='rpc/consultor_update_details'&&b.method==='POST'&&b.data?.change?.kind==='card'&&Object.hasOwn(b.data.change,'additionalColumns')){
     const {expected_revision:revision,change}=b.data;
     const valid=value=>typeof value==='string'&&/^c\d{1,3}$/.test(value);
-    if(!Number.isInteger(revision)||!valid(change.title)||!Array.isArray(change.additionalColumns)||change.additionalColumns.length>100||!change.additionalColumns.every(valid)||new Set(change.additionalColumns).size!==change.additionalColumns.length)throw Error('Preferencias inválidas.');
+    if(!Number.isInteger(revision)||!valid(change.title)||!Array.isArray(change.additionalColumns)||change.additionalColumns.length>1||!change.additionalColumns.every(valid)||new Set(change.additionalColumns).size!==change.additionalColumns.length)throw Error('Preferencias inválidas.');
     const rows=await store.call(reads[0]),row=rows[0];
     if(!row||row.revision!==revision)throw Object.assign(Error('Otro dispositivo guardó cambios. Actualizá antes de reintentar.'),{status:409});
     const data={...row.data,settings:{...row.data.settings,card:{...row.data.settings?.card,title:change.title,additional:change.additionalColumns[0]||'',additionalColumns:change.additionalColumns}}};

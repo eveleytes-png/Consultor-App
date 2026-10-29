@@ -96,3 +96,7 @@ body:not(.connection-checked) main>*{display:none}body:not(.connection-checked) 
 .configured-detail>.seller-detail-footer .seller-detail-edit:hover{background:#fafaff;border-color:#c8cfe0}
 @media(max-width:600px){.configured-detail>.seller-detail-footer [data-fast-detail]{grid-column:auto}.configured-detail>.seller-detail-footer .seller-detail-edit{margin-left:0;width:100%;min-height:46px;padding:10px 8px;font-size:12px}}
 .live-seller .seller-name-actions>.chips:empty{display:none}
+/* Additional seller text occupies its own line and truncates to the available width. */
+.live-seller>.seller-additional,.cartera-view #seller-results .live-seller>.seller-additional,.configured-detail .detail-summary-card>.seller-additional,.map-selected-card .live-seller>.seller-additional{display:block;min-width:0;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.settings-example-card>p{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.cartera-view .live-seller>.cartera-meta>span{min-width:0;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
