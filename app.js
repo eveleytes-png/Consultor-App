@@ -12,11 +12,11 @@ if(query.get('pantalla')==='revision'){
   query.delete('pantalla'); query.delete('estado'); query.delete('vista');
   history.replaceState(null,'',location.pathname+(query.size?'?'+query:'')+location.hash);
 }
-let page=['inicio','acciones','points','sellers','usuario','agenda'].includes(query.get('pantalla'))?query.get('pantalla'):'inicio';
+let page=['inicio','acciones','points','sellers','usuario','perfil','agenda'].includes(query.get('pantalla'))?query.get('pantalla'):'inicio';
 let state='datos',view='';
 const pages=[['inicio','Inicio','home'],['acciones','Acciones comerciales','brief'],['points','Points','store'],['sellers','Sellers','users']];
 let name=pages.find(p=>p[0]===page)?.[1]||(page==='agenda'?'Inicio':'Mi perfil');
-const nav=(mobile=false)=>pages.map(([key,label,ic])=>`<a href="${key==='inicio'?'./':'?pantalla='+key}" ${(key===page||(page==='agenda'&&key==='inicio'))?'aria-current="page"':''} class="${(key===page||(page==='agenda'&&key==='inicio'))?'active':''}">${icon(ic)}${label}</a>`).join('')+`<a href="?pantalla=usuario" aria-label="Mi perfil" ${page==='usuario'?'aria-current="page"':''} class="profile ${page==='usuario'?'active':''}">${icon('user')}${mobile?'Mi perfil':''}</a>`;
+const nav=(mobile=false)=>pages.map(([key,label,ic])=>`<a href="${key==='inicio'?'./':'?pantalla='+key}" ${(key===page||(page==='agenda'&&key==='inicio'))?'aria-current="page"':''} class="${(key===page||(page==='agenda'&&key==='inicio'))?'active':''}">${icon(ic)}${label}</a>`).join('')+`<a href="?pantalla=perfil" aria-label="Mi perfil" ${page==='perfil'?'aria-current="page"':''} class="profile ${page==='perfil'?'active':''}">${icon('user')}${mobile?'Mi perfil':''}</a>`;
 const header=()=>`<header><a class="brand" href="./" aria-label="Ir a Inicio"><img src="assets/consultor-app-logo.svg" alt="Consultor App" width="5262" height="1078"></a><nav aria-label="Menú principal">${nav()}</nav><div class="mobile-nav"><span class="current">${name}</span><button type="button" class="menu-button" aria-label="Abrir menú" aria-controls="mobile-menu" aria-expanded="false">${icon('menu')}</button></div></header>`;
 const title=(h,sub='',right='')=>`<div class="section-head"><div><h2>${h}</h2>${sub?`<p class="muted">${sub}</p>`:''}</div>${right}</div>`;
 const date=new Intl.DateTimeFormat('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'America/Argentina/Buenos_Aires'}).format(new Date());
@@ -44,7 +44,7 @@ icons.star='<path d=\"m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 
 icons.pencil='<path d="m15 4 5 5M4 15l12-12 5 5-12 12-6 1z"/>';
 if(page==='sellers'&&view==='filtros')document.body.classList.add('filter-preview');
 document.title=`Consultor App · ${name}`;
-const screens={inicio:home,acciones:actions,points:points,sellers:sellerScreen,usuario:userScreen,agenda:agendaScreen};
+const screens={inicio:home,acciones:actions,points:points,sellers:sellerScreen,usuario:userScreen,perfil:userScreen,agenda:agendaScreen};
 document.getElementById('app').innerHTML=header()+`<main>${screens[page]()}</main><dialog id="mobile-menu" class="drawer" aria-labelledby="menu-title"><div class="drawer-title"><h2 id="menu-title">Navegación</h2><button type="button" class="menu-close" aria-label="Cerrar menú">${icon('close')}</button></div><nav aria-label="Navegación mobile">${nav(true)}</nav></dialog>`;
 
 const menu=document.getElementById('mobile-menu');
