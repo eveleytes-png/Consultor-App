@@ -6,10 +6,7 @@ export function createNotificationHandler({env=process.env,service=new Notificat
   try{
    const b=typeof req.body==='string'?JSON.parse(req.body):req.body;
    if(b&&JSON.stringify(b).length>100000)throw Object.assign(Error('Solicitud demasiado grande.'),{status:413});
-   if(req.query?.hook==='telegram'){
-    if(req.method!=='POST'||!safeEqual(req.headers['x-telegram-bot-api-secret-token'],env.TELEGRAM_WEBHOOK_SECRET))return res.status(403).json({error:'Acceso denegado.'});
-    await service.telegramHook(b||{});return res.status(200).json({ok:true});
-   }
+   if(req.query?.hook==='telegram')return res.status(410).json({error:'Las notificaciones por Telegram están desactivadas.'});
    if(req.query?.run==='daily'){
     if(req.method!=='POST'||!safeEqual(req.headers.authorization,'Bearer '+(env.NOTIFICATION_CRON_SECRET||''))||!env.NOTIFICATION_CRON_SECRET)return res.status(403).json({error:'Acceso denegado.'});
     singleConsultant(env);
@@ -23,9 +20,8 @@ export function createNotificationHandler({env=process.env,service=new Notificat
     case 'configure':await service.configure(owner,b);break;
     case 'emailCode':await service.sendCode(owner);break;
     case 'verifyEmail':await service.verifyCode(owner,b.code);break;
-    case 'telegramLink':return res.status(200).json({url:await service.telegramLink(owner)});
-    case 'confirmTelegram':await service.confirmTelegram(owner);break;
-    case 'unlinkTelegram':await service.store.update(owner,s=>{delete s.telegramChat;delete s.pendingChat;delete s.challenges.telegram;});break;
+    case 'telegramLink':case 'confirmTelegram':return res.status(410).json({error:'Solo se permiten notificaciones por email.'});
+    case 'unlinkTelegram':await service.store.update(owner,s=>{delete s.telegramChat;delete s.pendingChat;if(s.challenges)delete s.challenges.telegram;for(const job of Object.values(s.jobs||{}))if(job.channel==='telegram'&&['pending','retry'].includes(job.status))job.status='skipped';});break;
     case 'refresh':await service.refreshSource(owner);break;
     case 'review':await service.reviewChanges(owner,b.version);break;
     case 'preview':return res.status(200).json({text:await service.preview(owner)});

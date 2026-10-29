@@ -17,8 +17,8 @@ const {chromium}=require('C:/Users/Evelin/.cache/codex-runtimes/codex-primary-ru
   if(u.pathname==='/api/sheets'){
    if(req.method()==='GET')return json({configured:true,authenticated,privateStateEnabled:true});
    if(b.operation==='snapshot')return json({portfolio,stock:[],links:[]});
-   if(b.path?.startsWith('?'))return json({properties:{title:'Fixture'},sheets:[{properties:{sheetId:0,title:'BaseApp',gridProperties:{rowCount:100,columnCount:80}}},{properties:{sheetId:500157585,title:'Points_ConsultoresApp'}},{properties:{sheetId:1266882678,title:'Links_ConsultoresApp'}}]});
-   return json({valueRanges:[{valueRange:{values:b.body?.dataFilters?.[0]?.gridRange.sheetId===0?portfolio:[]}}]});
+   if(b.path?.startsWith('?'))return json({properties:{title:'Fixture'},sheets:[{properties:{sheetId:192864634,title:'Base Consultor App',gridProperties:{rowCount:100,columnCount:80}}},{properties:{sheetId:500157585,title:'Points_ConsultoresApp'}},{properties:{sheetId:1266882678,title:'Links_ConsultoresApp'}}]});
+   return json({valueRanges:[{valueRange:{values:b.body?.dataFilters?.[0]?.gridRange.sheetId===192864634?portfolio:[]}}]});
   }
   if(u.pathname==='/api/state')return json(b.path.includes('select=revision,sellers,data')?[state]:b.path.includes('select=revision')?[{revision:1}]:state);
   if(u.pathname==='/api/notifications'){
@@ -38,10 +38,10 @@ const {chromium}=require('C:/Users/Evelin/.cache/codex-runtimes/codex-primary-ru
   await page.locator('[data-routes]').click();assert.ok(await page.locator('dialog[open]').count());await page.evaluate(()=>document.querySelector('dialog[open]').close());
   await page.goto('https://fixture.test/?pantalla=usuario&notificaciones=cambios');await page.locator('[data-daily-form]').waitFor();
   await page.locator('[data-daily-form] [name=time]').fill('20:30');await page.locator('[data-daily-form] button').click();
-  await page.waitForFunction(()=>document.querySelector('[data-notification-message]')?.textContent==='Configuración actualizada.');assert.equal(settings.time,'20:30');
+  await page.waitForFunction(()=>document.querySelector('[data-notification-message]')?.textContent==='Configuración guardada.');assert.equal(settings.time,'20:30');
   await page.locator('[data-email-confirm]').click();await page.locator('dialog[open] [name=code]').fill('123456');await page.locator('dialog[open] form button').click();
   await page.waitForFunction(()=>!document.querySelector('dialog[open]'));assert.ok(calls.some(c=>c.operation==='verifyEmail'));
-  await page.locator('[data-notify=preview]').click();await page.getByText('Resumen de prueba',{exact:true}).waitFor();await page.evaluate(()=>document.querySelector('dialog[open]').close());
+  await page.locator('.notification-details summary').click();await page.locator('[data-notify=preview]').click();await page.getByText('Resumen de prueba',{exact:true}).waitFor();await page.evaluate(()=>document.querySelector('dialog[open]').close());
   await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await page.screenshot({path:'tests/notifications-profile-390.png',fullPage:true});
   authenticated=false;await page.goto('https://fixture.test/?pantalla=sellers&cartera=sin-aceptacion');await page.getByRole('button',{name:'Ingresar con Google'}).waitFor();

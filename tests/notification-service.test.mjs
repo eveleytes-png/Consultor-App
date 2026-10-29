@@ -27,20 +27,17 @@ test('Remitente Resend de prueba exige correo del titular; dominio propio admite
 });
 test('Dos ejecuciones concurrentes y repetidas: una aceptación por canal',async()=>{
  const x=setup();await Promise.all([x.service.run(now),x.service.run(now)]);await x.service.run(now);
- assert.equal(x.sent.filter(s=>s[0]==='email').length,1);assert.equal(x.sent.filter(s=>s[0]==='telegram').length,1);
+ assert.equal(x.sent.filter(s=>s[0]==='email').length,1);assert.equal(x.sent.filter(s=>s[0]==='telegram').length,0);
  assert.ok(Object.values(x.store.state.jobs).every(j=>j.status==='accepted'));
 });
-for(const failed of ['email','telegram'])test(`Reintenta únicamente ${failed} tras 429`,async()=>{
+for(const failed of ['email'])test(`Reintenta únicamente ${failed} tras 429`,async()=>{
  const x=setup(),original=x.providers[failed];let tries=0;
  x.providers[failed]=async(...args)=>{if(tries++===0)throw new ProviderError('temporary');return original(...args);};
  await x.service.run(now);
  const retry=Object.values(x.store.state.jobs).find(j=>j.channel===failed);assert.equal(retry.status,'retry');retry.retryAt=0;
- await x.service.run(now);assert.equal(x.sent.length,2);assert.equal(Object.values(x.store.state.jobs).find(j=>j.channel===failed).attempts,2);
+ await x.service.run(now);assert.equal(x.sent.length,1);assert.equal(Object.values(x.store.state.jobs).find(j=>j.channel===failed).attempts,2);
 });
-test('Timeout no reenvía automáticamente; canal exitoso conserva su estado',async()=>{
- const x=setup();x.providers.telegram=async()=>{throw new ProviderError('uncertain');};await x.service.run(now);await x.service.run(now);
- assert.equal(x.sent.length,1);assert.equal(Object.values(x.store.state.jobs).find(j=>j.channel==='telegram').attempts,1);
-});
+test('Timeout de email no reenvía automáticamente',async()=>{const x=setup();x.providers.email=async()=>{throw new ProviderError('uncertain');};await x.service.run(now);await x.service.run(now);assert.equal(x.sent.length,0);const jobs=Object.values(x.store.state.jobs);assert.equal(jobs.length,1);assert.equal(jobs[0].channel,'email');assert.equal(jobs[0].status,'uncertain');assert.equal(jobs[0].attempts,1);});
 test('Sin configuración y antes de hora no envía',async()=>{
  const x=setup();x.store.state.emailVerified=false;delete x.store.state.telegramChat;await x.service.run(now);assert.equal(x.sent.length,0);
  x.store.state.emailVerified=true;x.store.state.time='20:00';await x.service.run(now);assert.equal(x.sent.length,0);
@@ -63,24 +60,10 @@ test('Correo: código, caducidad lógica, límite de intentos y cambio de direcc
  await x.service.sendCode('owner@example.com');for(let i=0;i<5;i++)await assert.rejects(()=>x.service.verifyCode('owner@example.com','000000'));
  const next=/es (\d{6})/.exec(x.sent[1][2])[1];await assert.rejects(()=>x.service.verifyCode('owner@example.com',next));
 });
-test('Telegram: chat privado, desafío de uso único y confirmación desde app',async()=>{
- const x=setup();delete x.store.state.telegramChat;const link=await x.service.telegramLink('owner@example.com'),token=new URL(link).searchParams.get('start');
- await x.service.telegramHook({message:{chat:{id:55,type:'group'},text:'/start '+token}});assert.equal(x.store.state.pendingChat,undefined);
- await x.service.telegramHook({message:{chat:{id:55,type:'private'},text:'/start '+token}});assert.equal(x.store.state.telegramChat,undefined);
- await x.service.confirmTelegram('owner@example.com');assert.equal(x.store.state.telegramChat,'55');
- await x.service.telegramHook({message:{chat:{id:66,type:'private'},text:'/start '+token}});assert.equal(x.store.state.pendingChat,undefined);
-});
-test('Webhook: secreto en cuerpo servidor, sin borrar pendientes; fallo impide emitir vínculo',async()=>{
- let requestBody;
- const p=createProviders({TELEGRAM_BOT_TOKEN:'test-token',TELEGRAM_BOT_USERNAME:'test_bot',TELEGRAM_WEBHOOK_SECRET:'test-secret'},async(url,opt)=>{requestBody=JSON.parse(opt.body);assert.ok(url.endsWith('/setWebhook'));return {ok:true,json:async()=>({ok:true,result:true})};});
- await p.configureTelegramWebhook('https://example.com/api/notifications?hook=telegram');
- assert.deepEqual(requestBody,{url:'https://example.com/api/notifications?hook=telegram',secret_token:'test-secret',allowed_updates:['message'],drop_pending_updates:false});
- const x=setup();x.providers.configureTelegramWebhook=async()=>{throw new ProviderError('temporary');};await assert.rejects(()=>x.service.telegramLink('owner@example.com'));assert.equal(x.store.state.challenges.telegram,undefined);
-});
 test('APIs: anónimo y secretos falsos no ejecutan acciones; multiusuario bloqueado',async()=>{
  const x=setup(),handler=createNotificationHandler({env,service:x.service});
  const call=async(query={},headers={})=>{let status;const res={setHeader(){},status(n){status=n;return this;},json(data){return data;}};await handler({method:'POST',query,headers,body:{}},res);return status;};
- assert.equal(await call(),401);assert.equal(await call({run:'daily'},{authorization:'Bearer fake'}),403);assert.equal(await call({hook:'telegram'}),403);assert.equal(x.sent.length,0);
+ assert.equal(await call(),401);assert.equal(await call({run:'daily'},{authorization:'Bearer fake'}),403);assert.equal(await call({hook:'telegram'}),410);assert.equal(x.sent.length,0);
  const multi=new NotificationService({env:{...env,AUTH_ALLOWED_EMAILS:'a@example.com,b@example.com'},store:x.store,providers:x.providers});await assert.rejects(()=>multi.run(now),/exactamente una cuenta/);
 });
 test('Proveedores: texto plano, claves privadas y clasificación conservadora',async()=>{
@@ -90,14 +73,12 @@ test('Proveedores: texto plano, claves privadas y clasificación conservadora',a
  assert.equal(telegramParts('😀'.repeat(3000)).join(''),'😀'.repeat(3000));assert.ok(telegramParts('😀'.repeat(3000)).every(p=>p.length<=3500));
 });
 
-test('Telegram: un vínculo vencido se informa y no puede confirmarse',async()=>{
- const x=setup();delete x.store.state.telegramChat;
- x.store.state.pendingChat={id:'55',label:'Cuenta de prueba',expires:Date.now()-1000};
- let status=await x.service.status('owner@example.com');
- assert.equal(status.telegramPending,false);assert.equal(status.telegramExpired,true);assert.equal(status.telegramCandidate,null);
- await assert.rejects(()=>x.service.confirmTelegram('owner@example.com'),/Abrí el enlace/);
- assert.equal(x.store.state.telegramChat,undefined);
- x.store.state.pendingChat.expires=Date.now()+60000;
- status=await x.service.status('owner@example.com');
- assert.equal(status.telegramPending,true);assert.equal(status.telegramExpired,false);assert.equal(status.telegramCandidate.id,'55');
+
+test('Solo email: bloquea trabajos Telegram antiguos y respeta switch y destino verificado',async()=>{
+ const x=setup();x.store.state.jobs={legacy:{date:'2026-10-21',channel:'telegram',destination:'123',text:'old',index:0,status:'retry',attempts:0}};
+ await x.service.run(now);assert.equal(x.sent.filter(s=>s[0]==='telegram').length,0);assert.equal(x.sent.filter(s=>s[0]==='email').length,1);
+ const status=await x.service.status('owner@example.com');assert.equal(status.telegramConfigured,false);assert.equal(status.telegramLinked,false);
+ const off=setup();off.store.state.enabled=false;await off.service.run(now);assert.equal(off.sent.length,0);
+ const pending=setup();pending.store.state.emailVerified=false;await pending.service.run(now);assert.equal(pending.sent.length,0);
+ const handler=createNotificationHandler({env:{...env,CONSULTOR_REQUIRE_LOGIN:'false',GOOGLE_SERVICE_ACCOUNT_EMAIL:'test',GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:'test'},service:x.service});for(const operation of ['telegramLink','confirmTelegram']){let code;await handler({method:'POST',headers:{origin:'https://example.com'},body:{operation}}, {setHeader(){},status(n){code=n;return this;},json(){}});assert.equal(code,410);}
 });
