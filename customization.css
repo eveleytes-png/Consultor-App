@@ -34,3 +34,57 @@ body:not(.connection-checked) main>*{display:none}body:not(.connection-checked) 
 
 
 .profile-config .notification-enable{display:flex;align-items:center;gap:.6rem}.profile-config .notification-enable input{width:auto;margin:0;flex:none}
+
+/* Seller detail: reference card layout, with a separate scrolling data region. */
+.seller-detail-dialog.configured-detail{width:min(960px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);padding:0;border:1px solid #e3e7f0;border-radius:24px;background:#fff;overflow:hidden;box-shadow:0 24px 80px #17203330;color:#172033}
+.seller-detail-dialog.configured-detail[open]{display:flex;flex-direction:column}
+.seller-detail-dialog.configured-detail .detail-fixed-heading{position:relative;top:auto;display:block!important;flex:none;margin:0;padding:32px 42px 28px;background:#fafaff;border-bottom:1px solid #e8ebf3}
+.seller-detail-dialog.configured-detail .detail-fixed-heading>.menu-close{position:absolute;right:18px;top:16px;margin:0;width:36px;height:36px;min-width:36px;min-height:36px;color:#74839a;z-index:2}
+.seller-detail-dialog.configured-detail .detail-summary-card{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:24px;row-gap:4px;padding:0;border:0;background:transparent;box-shadow:none;margin:0;min-width:0}
+.configured-detail .detail-summary-card .seller-body{grid-column:1;grid-row:1;min-width:0;padding:0}
+.configured-detail .detail-summary-card .seller-name-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.configured-detail .detail-summary-card .seller-name-actions>strong{font-size:21px;line-height:1.35;letter-spacing:-.015em;overflow-wrap:anywhere}
+.configured-detail .detail-summary-card .seller-name-actions>.chips{flex-basis:100%;margin:8px 0 0;gap:7px;justify-content:flex-start}
+.configured-detail .detail-summary-card .seller-name-actions>.icon-action{width:28px;min-width:28px;height:28px;min-height:28px;padding:4px;color:#6653ff}
+.configured-detail .detail-summary-card .action-pill{font-size:12px;border-radius:8px;padding:4px 9px}
+.configured-detail .detail-summary-card>.mail{grid-column:1;grid-row:2;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;overflow-wrap:anywhere;color:#687a97;font-size:14px;margin:0}
+.configured-detail .detail-summary-card>.mail button{color:#6653ff;min-width:32px;min-height:32px}
+.configured-detail .detail-summary-card>.seller-actions{grid-column:2;grid-row:1/4;display:flex;align-self:start;gap:10px;margin:3px 0 0;padding-right:0}
+.configured-detail .detail-summary-card>.seller-actions :is(a,button){display:grid;place-items:center;width:50px;height:50px;border:1px solid #dfe4ef;border-radius:15px;background:#fff;color:#6653ff}
+.configured-detail .detail-summary-card>.seller-additional{grid-column:1;color:#687a97;margin:2px 0 0}
+.seller-detail-dialog.configured-detail [data-detail-body]{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;padding:28px 42px 16px}
+.seller-detail-dialog.configured-detail .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch;margin:0}
+.seller-detail-dialog.configured-detail .seller-field{padding:16px;border:1px solid #e0e5f0;border-radius:13px;min-width:0;min-height:82px;background:#fff}
+.configured-detail .seller-field>small{display:block;font-size:13px;color:#6b7f9e;margin:0 0 10px;line-height:1.4}
+.configured-detail .seller-field>span{display:block;font-size:15px;line-height:1.45;overflow-wrap:anywhere;color:#172033}
+.configured-detail .seller-field>span.muted{color:#74839a}
+.configured-detail .detail-tools{margin:22px 0 0;padding:0}
+.configured-detail .detail-personalize{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:8px 0;min-height:44px;background:transparent;border:0;text-align:left;cursor:pointer;font-size:14px;color:#172033}
+.configured-detail .detail-personalize svg{color:#6653ff;width:19px;height:19px}
+.configured-detail .detail-personalize span{font-size:13px;color:#687a97}
+.seller-detail-dialog.configured-detail>.seller-detail-footer{flex:none;display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;margin:0;padding:22px 42px 28px;border-top:1px solid #e8ebf3;background:white}
+.configured-detail>.seller-detail-footer .mini{display:flex;justify-content:center;align-items:center;min-height:50px;padding:12px 17px;border:0;border-radius:13px;background:#f0edff;color:#6653ff;text-decoration:none;font-size:14px;font-weight:700;line-height:1.35;text-align:center;white-space:normal}
+.configured-detail>.seller-detail-footer .mini:hover{background:#e7e1ff}
+.configured-detail>.seller-detail-footer small{flex-basis:100%;font-size:12px}
+@media(max-width:600px){
+ .seller-detail-dialog.configured-detail{width:calc(100vw - 16px);max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);border-radius:20px}
+ .seller-detail-dialog.configured-detail .detail-fixed-heading{padding:22px 18px 16px}
+ .seller-detail-dialog.configured-detail .detail-summary-card{display:flex;flex-direction:column;gap:5px;padding:0}
+ .configured-detail .detail-summary-card .seller-name-actions{padding-right:28px;gap:6px}
+ .configured-detail .detail-summary-card .seller-name-actions>strong{font-size:18px;line-height:1.4}
+ .configured-detail .detail-summary-card>.mail{font-size:12px;gap:3px;line-height:1.6}
+ .configured-detail .detail-summary-card>.seller-actions{align-self:flex-start;gap:8px;margin:5px 0 0}
+ .configured-detail .detail-summary-card>.seller-actions :is(a,button){width:44px;height:44px;border-radius:12px}
+ .seller-detail-dialog.configured-detail [data-detail-body]{padding:16px 16px 12px}
+ .seller-detail-dialog.configured-detail .detail-grid{grid-template-columns:minmax(0,1fr);gap:10px}
+ .seller-detail-dialog.configured-detail .seller-field{padding:14px;min-height:76px}
+ .configured-detail .detail-personalize span{flex-basis:100%;padding-left:29px;line-height:1.5}
+ .seller-detail-dialog.configured-detail>.seller-detail-footer{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:14px 16px 16px;gap:8px;padding-bottom:max(16px,env(safe-area-inset-bottom))}
+ .configured-detail>.seller-detail-footer .mini{font-size:12px;min-height:46px;padding:10px 8px}
+ .configured-detail>.seller-detail-footer [data-fast-detail]{grid-column:1/-1}
+}
+@media(max-height:550px){.seller-detail-dialog.configured-detail .detail-fixed-heading{padding-top:16px;padding-bottom:12px}.configured-detail .detail-summary-card>.seller-additional{display:none}.seller-detail-dialog.configured-detail>.seller-detail-footer{padding-top:12px;padding-bottom:12px}}
+.configured-detail .detail-summary-card .seller-name-actions{display:grid;grid-template-columns:minmax(0,1fr) 28px;align-items:start}
+.configured-detail .detail-summary-card .seller-name-actions>strong{grid-column:1;grid-row:1;min-width:0}
+.configured-detail .detail-summary-card .seller-name-actions>.icon-action{grid-column:2;grid-row:1}
+.configured-detail .detail-summary-card .seller-name-actions>.chips{grid-column:1/-1;grid-row:2;display:flex;flex-wrap:wrap;min-width:0}

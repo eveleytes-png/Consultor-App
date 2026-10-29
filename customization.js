@@ -32,9 +32,14 @@ sellerDetail=function(s){
   summary.querySelectorAll('[data-op="seller-detail"]').forEach(el=>{el.removeAttribute('data-op');el.removeAttribute('role');el.removeAttribute('tabindex');el.removeAttribute('aria-label');});summary.removeAttribute('data-op');
   const fast=window.consultorFastSellerDetail(s,portfolioHeaders);
   summary.querySelector('.survey-buttons').insertAdjacentHTML('beforeend',fast.url?`<a class="mini" data-fast-detail ${window.ConsultorMercadoPago.attributes(fast.url)}>Detalle en fast</a>`:`<button type="button" class="mini" data-fast-detail disabled title="Cust ID no disponible" aria-label="Detalle en fast: Cust ID no disponible">Detalle en fast</button><small class="muted">Cust ID no disponible</small>`);
+  const footer=summary.querySelector('.survey-buttons');footer.classList.add('seller-detail-footer');
+  const contacts=summary.querySelector('.seller-actions');if(contacts)summary.append(contacts);
+  summary.querySelector('.seller-contact-row')?.remove();
+  if(normalizeAnswer(s.survey)==='si')summary.querySelector('.chips')?.insertAdjacentHTML('afterbegin',actionPill('Encuesta válida','green'));
   const title=summary.querySelector('.seller-name-actions > strong');title.setAttribute('role','heading');title.setAttribute('aria-level','2');
   const pencil=document.createElement('button');pencil.type='button';pencil.className='icon-action';pencil.setAttribute('aria-label','Editar datos del comercio');pencil.innerHTML=icon('pencil');title.after(pencil);pencil.onclick=()=>editSellerData(s,paint);
-  d.querySelector('[data-detail-body]')?.remove();d.insertAdjacentHTML('beforeend',`<div data-detail-body><div class="detail-tools"><button class="secondary" data-choose-detail>Configurar datos de la ficha</button></div><div class="detail-grid">${visibleDetailColumns().map(key=>{const c=portfolioColumns.find(c=>c.key===key),v=columnValue(s,key);return c?`<div class="seller-field"><small>${opEscape(c.label)}</small><span${v.trim()?'':' class="muted"'}>${v.trim()?opEscape(v):'Sin información aún'}</span></div>`:'';}).join('')}</div></div>`);d.querySelector('[data-choose-detail]').onclick=()=>chooseColumns('detailColumns',paint);
+  d.querySelector('.seller-detail-footer')?.remove();
+  d.querySelector('[data-detail-body]')?.remove();d.insertAdjacentHTML('beforeend',`<div data-detail-body><div class="detail-grid">${visibleDetailColumns().map(key=>{const c=portfolioColumns.find(c=>c.key===key),v=columnValue(s,key);return c?`<div class="seller-field"><small>${opEscape(c.label)}</small><span${v.trim()?'':' class="muted"'}>${v.trim()?opEscape(v):'Sin información aún'}</span></div>`:'';}).join('')}</div><div class="detail-tools"><button type="button" class="detail-personalize" data-choose-detail>${icon('filter')}<strong>Personalizar datos visibles</strong><span>Ordená y elegí qué información mostrar</span></button></div></div>`);d.append(footer);d.querySelector('[data-choose-detail]').onclick=()=>chooseColumns('detailColumns',paint);
  }
  d.refreshSellerDetails=paint;paint();
 };
