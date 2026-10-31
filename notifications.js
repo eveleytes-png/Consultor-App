@@ -9,7 +9,7 @@
  }
  function mount(){
   const section=document.createElement('section');section.className='settings-section';section.id='daily-notifications';
-  section.innerHTML='<div class="settings-section-heading"><span class="eyebrow">SEGUIMIENTO</span><h2>Notificaciones diarias</h2><p>Recibí por email un resumen del estado de tu cartera y sus cambios.</p></div><p data-notification-message role="status">Consultando configuración…</p><div data-notification-body></div>';
+  section.innerHTML='<div class="settings-section-heading"><span class="eyebrow">SEGUIMIENTO</span><h2>Notificaciones diarias</h2></div><p data-notification-message role="status">Consultando configuración…</p><div data-notification-body></div>';
   document.querySelector('main').append(section);const epoch=++generation;
   const message=section.querySelector('[data-notification-message]'),body=section.querySelector('[data-notification-body]');
   let working=false,editing=false;
@@ -41,7 +41,7 @@
    try{
     const value=await call(operation,data);
     if(operation==='preview'){const d=opDialog('Tu resumen diario','');const pre=document.createElement('pre');pre.style.whiteSpace='pre-wrap';pre.textContent=value.text;d.append(pre);message.textContent='Vista previa; no se envió.';}
-    else{paint(value);message.textContent=operation==='emailCode'?'Revisá tu correo para obtener el código de verificación.':'Configuración guardada.';}
+    else{paint(value);if(operation==='emailCode')message.textContent='Revisá tu correo para obtener el código de verificación.';else showOpNotice('Cambios guardados.');}
    }catch(error){if(previous&&!editing)paint(previous);message.textContent=error.message;}
    finally{controls.forEach((el,i)=>{if(el.isConnected)el.disabled=disabled[i];});working=false;}
   }
