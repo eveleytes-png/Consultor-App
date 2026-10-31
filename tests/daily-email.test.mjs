@@ -55,3 +55,17 @@ test('HTML seguro, enlaces originales, agenda nocturna y máximo cinco actividad
  for(const q of ['?pantalla=usuario&amp;notificaciones=cambios','?pantalla=sellers&amp;cartera=sin-aceptacion','?pantalla=agenda'])assert(html.includes(q));
  assert.throws(()=>composeDailyEmail(summary,'https://user:secret@example.com'));
 });
+
+test('Cuarto cuadro muestra el próximo escalón y no repite la frase debajo',()=>{
+ for(const [surveyed,target,missing] of [[59,60,1],[60,75,15],[66,75,9],[75,100,25],[99,100,1]]){
+  const rows=Array.from({length:100},(_,i)=>row(String(i),'01/10/2026',i<surveyed?'Si':'No'));
+  const {html}=composeDailyEmail(build(rows),'https://example.com');
+  const phrase=`Para llegar al ${target}%, te faltan ${missing} encuestas.`;
+  assert.equal(html.split(phrase).length-1,1);
+  const section=html.slice(html.indexOf('Tu cartera en números'),html.indexOf('IMPORTANTE ·'));
+  assert(section.indexOf(phrase)<section.lastIndexOf('</table>'));
+  assert(!section.slice(section.lastIndexOf('</table>')).includes(phrase));
+ }
+ const complete=composeDailyEmail(build([row('one','','Si')]),'https://example.com').html;assert(complete.includes('Llegaste al objetivo máximo del 100%.'));assert(!complete.includes('Para llegar al'));
+ const empty=composeDailyEmail(build([]),'https://example.com').html;assert(empty.includes('Sin comercios con aceptación para calcular el próximo objetivo.'));
+});
