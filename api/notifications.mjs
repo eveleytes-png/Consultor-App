@@ -24,6 +24,7 @@ export function createNotificationHandler({env=process.env,service=new Notificat
     case 'unlinkTelegram':await service.store.update(owner,s=>{delete s.telegramChat;delete s.pendingChat;if(s.challenges)delete s.challenges.telegram;for(const job of Object.values(s.jobs||{}))if(job.channel==='telegram'&&['pending','retry'].includes(job.status))job.status='skipped';});break;
     case 'refresh':await service.refreshSource(owner);break;
     case 'review':await service.reviewChanges(owner,b.version);break;
+    case 'sendTest':return res.status(200).json(await service.sendTest(owner,b.requestId));
     case 'preview':return res.status(200).json({text:await service.preview(owner)});
     default:return res.status(400).json({error:'Operación no permitida.'});
    }

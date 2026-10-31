@@ -97,3 +97,11 @@ test('Proveedor envía HTML opcional con texto alternativo y conserva Telegram',
  await p.email('b@example.com','alternativo','stable',undefined,'<h1>Resumen</h1>');assert.equal(requests[0].body.html,'<h1>Resumen</h1>');assert.equal(requests[0].body.text,'alternativo');
  await p.telegram('123','texto Telegram');assert.equal(requests[1].body.text,'texto Telegram');assert.equal(requests[1].body.html,undefined);
 });
+
+test('Prueba manual separada del diario, destinatario verificado y sin duplicar solicitud',async()=>{
+ const x=setup(),before=structuredClone(x.store.state),id='12345678-1234-1234-1234-123456789abc';
+ const result=await x.service.sendTest('owner@example.com',id);assert.equal(result.status,'accepted');assert.equal(result.destination,before.email);assert.equal(x.sent.length,1);assert(x.sent[0][5].includes('<html'));assert.deepEqual(x.store.state.jobs,before.jobs);assert.equal(x.store.state.payloadDate,undefined);assert.equal(x.store.state.time,before.time);assert.equal(x.store.state.email,before.email);
+ await assert.rejects(()=>x.service.sendTest('owner@example.com',id),/ya se solicitó/);assert.equal(x.sent.length,1);
+ const pending=setup();pending.store.state.emailVerified=false;await assert.rejects(()=>pending.service.sendTest('owner@example.com',id),/Verificá/);assert.equal(pending.sent.length,0);
+ const timeout=setup();timeout.providers.email=async()=>{throw new ProviderError('uncertain');};await assert.rejects(()=>timeout.service.sendTest('owner@example.com',id),/No se pudo confirmar/);assert.equal(timeout.store.state.testDelivery.status,'uncertain');await assert.rejects(()=>timeout.service.sendTest('owner@example.com',id),/ya se solicitó/);
+});
