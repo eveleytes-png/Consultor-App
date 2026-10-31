@@ -82,3 +82,18 @@ test('Solo email: bloquea trabajos Telegram antiguos y respeta switch y destino 
  const pending=setup();pending.store.state.emailVerified=false;await pending.service.run(now);assert.equal(pending.sent.length,0);
  const handler=createNotificationHandler({env:{...env,CONSULTOR_REQUIRE_LOGIN:'false',GOOGLE_SERVICE_ACCOUNT_EMAIL:'test',GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:'test'},service:x.service});for(const operation of ['telegramLink','confirmTelegram']){let code;await handler({method:'POST',headers:{origin:'https://example.com'},body:{operation}}, {setHeader(){},status(n){code=n;return this;},json(){}});assert.equal(code,410);}
 });
+
+test('HTML y texto congelados juntos: un único envío y el mismo contenido tras reintento',async()=>{
+ const x=setup(),original=x.providers.email;let first,attempt=0;
+ x.setRows([['Mail','Cust_id comercio','Nombre del comercio','Aceptación','Encuesta valida','Blindaje','Última Fecha contesto'],['m@example.com','1','Comercio','Si','No','','01/01/2024']]);
+ x.providers.email=async(...args)=>{if(attempt++===0){first=args;throw new ProviderError('temporary');}assert.deepEqual(args,first);return original(...args);};
+ await x.service.run(now);const job=Object.values(x.store.state.jobs)[0];
+ assert(job.text.includes('más de 12 meses'));assert(job.text.includes('más de 18 meses'));assert(job.html.includes('Seguimiento de encuestas'));
+ const frozen=structuredClone(job);x.setRows([['Mail','Cust_id comercio','Nombre del comercio','Aceptación','Encuesta valida','Blindaje','Última Fecha contesto'],['m@example.com','1','Otro','Si','No','','20/10/2026']]);job.retryAt=0;
+ await x.service.run(now);await x.service.run(now);assert.equal(x.sent.length,1);assert.equal(x.sent[0][5],frozen.html);assert.equal(x.store.state.time,'09:00');assert.equal(x.store.state.email,'owner@example.com');
+});
+test('Proveedor envía HTML opcional con texto alternativo y conserva Telegram',async()=>{
+ const requests=[];const p=createProviders({RESEND_API_KEY:'private',NOTIFICATION_FROM:'a@example.com',TELEGRAM_BOT_TOKEN:'private',TELEGRAM_BOT_USERNAME:'fixture',TELEGRAM_WEBHOOK_SECRET:'fixture'},async(url,opt)=>{requests.push({url,body:JSON.parse(opt.body)});return {ok:true,json:async()=>({id:'ok',ok:true,result:{message_id:1}})};});
+ await p.email('b@example.com','alternativo','stable',undefined,'<h1>Resumen</h1>');assert.equal(requests[0].body.html,'<h1>Resumen</h1>');assert.equal(requests[0].body.text,'alternativo');
+ await p.telegram('123','texto Telegram');assert.equal(requests[1].body.text,'texto Telegram');assert.equal(requests[1].body.html,undefined);
+});
