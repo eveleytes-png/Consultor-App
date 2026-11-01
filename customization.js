@@ -75,6 +75,7 @@ profileConfiguration=function(){
  form.addEventListener('change',preview);preview();
  form.onsubmit=e=>{e.preventDefault();saveExtra(form,{kind:'card',title:form.elements.title.value,additionalColumns:[...form.querySelectorAll('[name="additionalColumns"]:checked')].map(el=>el.value).filter(Boolean)});};
 };
+const mapTilerKey='KYoipt2HoFR1VlH9eqkJ';
 let geographicMap=null,mapLibraryPromise=null,mapBaseLayer="Mapa",mapViewport=null;
 const expandedMapSellers=new Set();
 // Use the whole filtered business zone, never just the closest screen-space points.
