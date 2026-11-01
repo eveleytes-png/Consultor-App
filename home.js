@@ -65,7 +65,7 @@ function activityOccursOn(a,key){
 function activitiesOnDate(records,key){return records.filter(a=>activityOccursOn(a,key)).map(a=>({...a,date:key,completed:a.repeat?!!a.completedDates?.includes(key):!!a.completed})).sort((a,b)=>a.time.localeCompare(b.time));}
 if(typeof module!=='undefined'&&module.exports)module.exports={surveyOlderThan,activityOccursOn,activitiesOnDate,computePortfolio,normalizeAnswer,mapPortfolioHeaders,parsePortfolioRows};
 const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const todayKey=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+let todayKey=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const activities=[];
 const usefulLinks=[];
 function activityRows(){return activities.filter(a=>a.date===todayKey).sort((a,b)=>a.time.localeCompare(b.time)).map(a=>`<div class="activity agenda-activity"><time>${escapeHtml(a.time)}</time><div><strong>${escapeHtml(a.description)}</strong>${a.comment?`<small>${escapeHtml(a.comment)}</small>`:''}</div></div>`).join('')||'<p class="muted">No tenés actividades para hoy.</p>';}

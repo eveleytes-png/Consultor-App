@@ -56,5 +56,6 @@
  profileConfiguration=function(){originalConfiguration();const parent=document.querySelector('#card-settings');if(!parent)return;section=document.createElement('article');section.id='visit-settings';section.className='settings-panel visit-settings';parent.append(section);load();};
  const main=document.querySelector('main');if(main)new MutationObserver(refreshLegend).observe(main,{childList:true,subtree:true});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!working&&!section?.isConnected)load();});
+ document.addEventListener('consultor-day-change',refreshColors);
  setInterval(refreshColors,60000);load();
 })();
