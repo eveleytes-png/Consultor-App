@@ -131,7 +131,7 @@ mapLibrary().then(L=>{
  map.on('click',e=>{if(e.originalEvent?.target?.closest?.('.leaflet-marker-icon,.leaflet-control,.leaflet-popup'))return;closeSellerCard();});
  function selectSeller(s){map.closePopup();mapSelected=s.id;paintSellerCard(s);}
  for(const s of located){
-  const marker=L.marker(parseLatLog(s.latlog),{title:s.n,alt:'Ubicación de '+s.n,icon:L.divIcon({className:'seller-map-marker',html:`<span style="background:${sellerColor(s)}"></span>`,iconSize:[20,20],iconAnchor:[10,10]})}).addTo(map);
+  const marker=L.marker(parseLatLog(s.latlog),{visitSellerId:s.id,title:s.n,alt:'Ubicación de '+s.n,icon:L.divIcon({className:'seller-map-marker',html:`<span style="background:${sellerColor(s)}"></span>`,iconSize:[20,20],iconAnchor:[10,10]})}).addTo(map);
   marker.on('click',e=>{
    const center=map.latLngToContainerPoint(marker.getLatLng());
    const nearby=located.filter(other=>map.latLngToContainerPoint(parseLatLog(other.latlog)).distanceTo(center)<24);

@@ -1,14 +1,34 @@
-import {requireConsultant} from './sheets.mjs';
+import {requireConsultant,googleRequest,serverConfig} from './sheets.mjs';
+import visits from '../visit-visualization.js';
 import {NotificationStore} from '../lib/notification-store.mjs';
 import {validateUserProfile} from '../lib/profile-settings.mjs';
-export function createStateHandler({env=process.env,store=new NotificationStore(env)}={}){
+export function createStateHandler({env=process.env,store=new NotificationStore(env),google=googleRequest}={}){
  return async(req,res)=>{
   res.setHeader('Cache-Control','private, no-store');
   try{
-   requireConsultant(req,env);
+   const owner=requireConsultant(req,env);
    if(req.method!=='POST')return res.status(405).json({error:'Método no permitido.'});
    const b=typeof req.body==='string'?JSON.parse(req.body):req.body;
    if(!b||JSON.stringify(b).length>2100000)throw Error('Solicitud inválida.');
+   if(b.operation==='visitVisualization'){
+    if(b.method==='GET'){
+     const {state}=await store.read(owner);return res.status(200).json({settings:state.visitVisualization||visits.defaults(),revision:state.visitVisualizationRevision||0});
+    }
+    if(b.method!=='PUT'||!Number.isSafeInteger(b.expectedRevision)||b.expectedRevision<0)throw Error('Solicitud inválida.');
+    let columns=[];
+    if(b.settings?.mode==='manual'){
+     const result=await google(serverConfig(env),'/values:batchGetByDataFilter',{dataFilters:[{gridRange:{sheetId:192864634,startRowIndex:0}}],majorDimension:'ROWS',valueRenderOption:'FORMATTED_VALUE'},'read');
+     const values=result.valueRanges?.[0]?.valueRange?.values;
+     if(!Array.isArray(values)||!values.length)throw Object.assign(Error('No se pudieron verificar las columnas de la cartera.'),{status:503});
+     columns=visits.dateColumns(values[0],values.slice(1));
+    }
+    let settings;try{settings=visits.validate(b.settings,columns);}catch(e){throw Object.assign(e,{status:400});}
+    await store.update(owner,state=>{
+     if((state.visitVisualizationRevision||0)!==b.expectedRevision)throw Object.assign(Error('Otro dispositivo cambió esta preferencia. Actualizá antes de guardar.'),{status:409});
+     state.visitVisualization=settings;state.visitVisualizationRevision=b.expectedRevision+1;
+    });
+    return res.status(200).json({settings,revision:b.expectedRevision+1});
+   }
    const reads=['consultor_shared_state?id=eq.demo&select=revision,sellers,data','consultor_shared_state?id=eq.demo&select=revision'];
    if(reads.includes(b.path)&&b.method==='GET')return res.status(200).json(await store.call(b.path));
    if(b.path==='rpc/consultor_update_details'&&b.method==='POST'&&b.data?.change?.kind==='userProfile'){
