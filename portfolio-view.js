@@ -7,6 +7,10 @@
   'data-excel':icons.download,
   'data-backup-baseapp':'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/>'
  };
+ function bobbinHTML(rows){
+  const result=window.consultorBobbinSummary?.(rows)||{total:null,info:'Consultando configuración…'};
+  return '<div class="bobbin-stat'+(result.total===null?' cartera-stat-unavailable':'')+'"><strong>'+  (result.total===null?'—':new Intl.NumberFormat('es-AR',{maximumFractionDigits:6}).format(result.total))+'</strong><span>BOB necesarias</span>'+(result.info?'<small>'+escapeHtml(result.info)+'</small>':'')+'</div>';
+ }
  function decorate(){
   const active=page==='sellers';
   main.classList.toggle('cartera-view',active);
@@ -25,8 +29,15 @@
    const rows=filteredSellers(),located=rows.filter(s=>parseLatLog(s.latlog)).length;
    let summary=root.querySelector(':scope>.cartera-stats');
    if(!summary){summary=document.createElement('div');summary.className='cartera-stats';summary.setAttribute('aria-label','Resumen de los comercios filtrados');tools.after(summary);}
-   const html=`${[[rows.length,'Comercios'],[located,'Con ubicación'],[rows.length-located,'Sin ubicación']].map(([n,label])=>`<div><strong>${n}</strong><span>${label}</span></div>`).join('')}<div class="cartera-stat-unavailable" title="El proyecto actual no tiene implementado un indicador agregado de BOB. Se conserva sin calcular una regla nueva."><strong>—</strong><span>BOB necesarias</span><small>Indicador no disponible</small></div>`;
+   const html=`${[[rows.length,'Comercios'],[located,'Con ubicación'],[rows.length-located,'Sin ubicación']].map(([n,label])=>`<div><strong>${n}</strong><span>${label}</span></div>`).join('')}${bobbinHTML(rows)}`;
    if(summary.innerHTML!==html)summary.innerHTML=html;
+   const mapSummary=root.querySelector('.map-results-summary');
+   if(mapSummary){
+    let bobbins=mapSummary.querySelector('[data-bobbin-map-summary]');if(!bobbins){bobbins=document.createElement('span');bobbins.dataset.bobbinMapSummary='';mapSummary.append(bobbins);}
+    const result=window.consultorBobbinSummary?.(rows)||{total:null,info:'Consultando configuración…'};
+    const content='BOB necesarias: <strong>'+(result.total===null?'—':new Intl.NumberFormat('es-AR',{maximumFractionDigits:6}).format(result.total))+'</strong>'+(result.info?' <small>'+escapeHtml(result.info)+'</small>':'');
+    if(bobbins.innerHTML!==content)bobbins.innerHTML=content;
+   }
   }
   for(const card of root.querySelectorAll('.live-seller')){
    const seller=sellers.find(s=>String(s.id)===String(card.dataset.id));
@@ -43,5 +54,6 @@
  function decorateFilters(){if(page!=='sellers')return;document.querySelectorAll('dialog.bottom-sheet').forEach(d=>{if(d.querySelector('.filter-content input[name="accept"]'))d.classList.add('cartera-filters');});}
  new MutationObserver(decorate).observe(main,{childList:true,subtree:true});
  new MutationObserver(decorateFilters).observe(document.body,{childList:true});
+ document.addEventListener('consultor-bobbin-settings-change',decorate);
  decorate();decorateFilters();
 })();

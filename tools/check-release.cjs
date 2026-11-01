@@ -10,7 +10,7 @@ for(const match of html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)){
 }
 for(const args of [
  ['tests/map-viewport.test.cjs'],
- ['--test','tests/visit-visualization.test.mjs','tests/day-clock.test.mjs'],
+ ['--test','tests/visit-visualization.test.mjs','tests/day-clock.test.mjs','tests/bobbins.test.mjs'],
  ['tests/survey-age-filters.test.cjs'],
  ['tests/navigation-actions-regression.test.cjs']
 ])execFileSync(process.execPath,args,{cwd:root,stdio:'inherit'});

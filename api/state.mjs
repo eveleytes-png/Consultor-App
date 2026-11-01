@@ -1,5 +1,6 @@
 import {requireConsultant,googleRequest,serverConfig} from './sheets.mjs';
 import visits from '../visit-visualization.js';
+import bobbins from '../bobbins.js';
 import {NotificationStore} from '../lib/notification-store.mjs';
 import {validateUserProfile} from '../lib/profile-settings.mjs';
 export function createStateHandler({env=process.env,store=new NotificationStore(env),google=googleRequest}={}){
@@ -10,6 +11,19 @@ export function createStateHandler({env=process.env,store=new NotificationStore(
    if(req.method!=='POST')return res.status(405).json({error:'Método no permitido.'});
    const b=typeof req.body==='string'?JSON.parse(req.body):req.body;
    if(!b||JSON.stringify(b).length>2100000)throw Error('Solicitud inválida.');
+   if(b.operation==='bobbinVisualization'){
+    if(b.method==='GET'){const {state}=await store.read(owner);return res.status(200).json({settings:state.bobbinVisualization||{column:''},revision:state.bobbinVisualizationRevision||0});}
+    if(b.method!=='PUT'||!Number.isSafeInteger(b.expectedRevision)||b.expectedRevision<0||typeof b.settings?.column!=='string'||b.settings.column.length>500)throw Error('Solicitud inválida.');
+    const settings={column:b.settings.column};
+    if(settings.column){
+     const result=await google(serverConfig(env),'/values:batchGetByDataFilter',{dataFilters:[{gridRange:{sheetId:192864634,startRowIndex:0}}],majorDimension:'ROWS',valueRenderOption:'FORMATTED_VALUE'},'read');
+     const headers=result.valueRanges?.[0]?.valueRange?.values?.[0];
+     if(!Array.isArray(headers))throw Object.assign(Error('No se pudieron verificar las columnas de la cartera.'),{status:503});
+     if(!bobbins.columns(headers).some(c=>c.header===settings.column))throw Object.assign(Error('Seleccioná una columna disponible en tu cartera.'),{status:400});
+    }
+    await store.update(owner,state=>{if((state.bobbinVisualizationRevision||0)!==b.expectedRevision)throw Object.assign(Error('Otro dispositivo cambió esta preferencia. Actualizá antes de guardar.'),{status:409});state.bobbinVisualization=settings;state.bobbinVisualizationRevision=b.expectedRevision+1;});
+    return res.status(200).json({settings,revision:b.expectedRevision+1});
+   }
    if(b.operation==='visitVisualization'){
     if(b.method==='GET'){
      const {state}=await store.read(owner);return res.status(200).json({settings:state.visitVisualization||visits.defaults(),revision:state.visitVisualizationRevision||0});
