@@ -7,4 +7,6 @@ for(const name of fs.readdirSync(root)){
 }
 for(const name of ['assets','vendor'])fs.cpSync(path.join(root,name),path.join(out,name),{recursive:true});
 if(!fs.existsSync(path.join(out,'notifications.js')))throw Error('Missing profile extension');
-console.log('Static app built. Backend code, SQL and tests excluded from public output.');
+// Any failed check exits the build and prevents Vercel from replacing production.
+require('./check-release.cjs');
+console.log('Static app built and release checks passed. Backend code, SQL and tests excluded from public output.');
