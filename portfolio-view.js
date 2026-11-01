@@ -7,9 +7,13 @@
   'data-excel':icons.download,
   'data-backup-baseapp':'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/>'
  };
+ function bobbinHint(result){
+  if(!result.info)return '';
+  return result.needsConfiguration?'<a class="bobbin-config-link" href="?pantalla=usuario#bobbin-settings">'+escapeHtml(result.info)+'</a>':escapeHtml(result.info);
+ }
  function bobbinHTML(rows){
   const result=window.consultorBobbinSummary?.(rows)||{total:null,info:'Consultando configuración…'};
-  return '<div class="bobbin-stat'+(result.total===null?' cartera-stat-unavailable':'')+'"><strong>'+  (result.total===null?'—':new Intl.NumberFormat('es-AR',{maximumFractionDigits:6}).format(result.total))+'</strong><span>BOB necesarias</span>'+(result.info?'<small>'+escapeHtml(result.info)+'</small>':'')+'</div>';
+  return '<div class="bobbin-stat'+(result.total===null?' cartera-stat-unavailable':'')+'"><strong>'+  (result.total===null?'—':new Intl.NumberFormat('es-AR',{maximumFractionDigits:6}).format(result.total))+'</strong><span>BOB necesarias</span>'+(result.info?'<small>'+bobbinHint(result)+'</small>':'')+'</div>';
  }
  function decorate(){
   const active=page==='sellers';
@@ -35,7 +39,7 @@
    if(mapSummary){
     let bobbins=mapSummary.querySelector('[data-bobbin-map-summary]');if(!bobbins){bobbins=document.createElement('span');bobbins.dataset.bobbinMapSummary='';mapSummary.append(bobbins);}
     const result=window.consultorBobbinSummary?.(rows)||{total:null,info:'Consultando configuración…'};
-    const content='BOB necesarias: <strong>'+(result.total===null?'—':new Intl.NumberFormat('es-AR',{maximumFractionDigits:6}).format(result.total))+'</strong>'+(result.info?' <small>'+escapeHtml(result.info)+'</small>':'');
+    const content='BOB necesarias: <strong>'+(result.total===null?'—':new Intl.NumberFormat('es-AR',{maximumFractionDigits:6}).format(result.total))+'</strong>'+(result.info?' <small>'+bobbinHint(result)+'</small>':'');
     if(bobbins.innerHTML!==content)bobbins.innerHTML=content;
    }
   }

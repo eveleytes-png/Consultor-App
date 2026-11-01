@@ -100,3 +100,4 @@ dialog.cartera-filters .primary{background:#5546ff;color:white;border-color:#554
  .cartera-view .geographic-wrapper,.cartera-view .geographic-map{height:350px;min-height:350px}
 }
 .cartera-view .cartera-stats .bobbin-stat small{position:static;display:block;width:auto;height:auto;overflow:visible;clip-path:none;white-space:normal;margin-top:6px;color:var(--cartera-muted);font-size:11px;line-height:1.5}.cartera-view [data-bobbin-map-summary] small{font-size:11px;color:var(--cartera-muted)}
+.bobbin-config-link{color:var(--cartera-purple,#5546ff);text-decoration:underline;text-underline-offset:3px}.bobbin-config-link:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:3px}

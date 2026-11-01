@@ -22,13 +22,13 @@
  root.ConsultorBobbins={quantity,columns,total};if(typeof module!=='undefined'&&module.exports)module.exports=root.ConsultorBobbins;
 })(typeof window==='undefined'?globalThis:window);
 if(typeof document!=='undefined')(()=>{
- const original=profileConfiguration,helpers=window.ConsultorBobbins;let column='',revision=0,loading=true,error='',section=null,working=false,epoch=0;
+ const original=profileConfiguration,helpers=window.ConsultorBobbins;let column='',revision=0,loading=true,error='',section=null,working=false,epoch=0,focusPending=false;
  const notify=()=>document.dispatchEvent(new CustomEvent('consultor-bobbin-settings-change'));
- window.consultorBobbinSummary=rows=>loading?{total:null,info:'Consultando configuración…'}:error?{total:null,info:'No se pudo consultar la configuración'}:!column?{total:null,info:'Seleccioná una columna en Configuración'}:(()=>{const result=helpers.total(rows,portfolioHeaders,column);return {...result,info:result.total===null?'Columna no disponible':result.invalid?`${result.invalid} valores no numéricos omitidos`:''};})();
+ window.consultorBobbinSummary=rows=>loading?{total:null,info:'Consultando configuración…'}:error?{total:null,info:'No se pudo consultar la configuración'}:!column?{total:null,info:'Seleccioná una columna en Configuración',needsConfiguration:true}:(()=>{const result=helpers.total(rows,portfolioHeaders,column);return {...result,info:result.total===null?'Columna no disponible':result.invalid?`${result.invalid} valores no numéricos omitidos`:''};})();
  async function request(method,extra={}){
   const r=await fetch('/api/state',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:'bobbinVisualization',method,...extra}),signal:AbortSignal.timeout(20000)});const value=await r.json();if(!r.ok)throw Error(value.error||'No se pudo guardar la columna de bobinas.');return value;
  }
- async function load(){const token=++epoch;loading=true;error='';paint();notify();try{const value=await request('GET');if(token!==epoch)return;column=value.settings.column;revision=value.revision;}catch(e){if(token===epoch)error=e.message;}finally{if(token===epoch){loading=false;paint();notify();}}}
+ async function load(){const token=++epoch;loading=true;error='';paint();notify();try{const value=await request('GET');if(token!==epoch)return;column=value.settings.column;revision=value.revision;}catch(e){if(token===epoch)error=e.message;}finally{if(token===epoch){loading=false;paint();notify();if(focusPending&&section?.isConnected){focusPending=false;requestAnimationFrame(()=>{if(!section?.isConnected)return;section.tabIndex=-1;section.focus({preventScroll:true});section.scrollIntoView({block:'start',behavior:'instant'});});}}}}
  function paint(){
   if(!section?.isConnected)return;
   const description='Seleccioná la columna que contiene la cantidad de bobinas que debés entregar. La app sumará los valores de los comercios incluidos en los filtros aplicados en el mapa y mostrará el resultado en “BOB necesarias”, en Mi cartera.';
@@ -42,6 +42,6 @@ if(typeof document!=='undefined')(()=>{
    try{const value=await request('PUT',{settings:{column:form.elements.column.value},expectedRevision:revision});column=value.settings.column;revision=value.revision;notify();paint();showOpNotice('Cambios guardados.');}catch(e){form.querySelector('[role="alert"]').textContent=e.message;}finally{working=false;controls.forEach(el=>{if(el.isConnected)el.disabled=false;});}
   };
  }
- profileConfiguration=function(){original();const parent=document.querySelector('#card-settings');if(!parent)return;section=document.createElement('article');section.id='bobbin-settings';section.className='settings-panel visit-settings';const visits=parent.querySelector('#visit-settings');if(visits)visits.before(section);else parent.append(section);load();};
+ profileConfiguration=function(){original();const parent=document.querySelector('#card-settings');if(!parent)return;section=document.createElement('article');section.id='bobbin-settings';focusPending=location.hash==='#bobbin-settings';section.className='settings-panel visit-settings';const visits=parent.querySelector('#visit-settings');if(visits)visits.before(section);else parent.append(section);load();};
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!working&&!section?.isConnected)load();});load();
 })();
