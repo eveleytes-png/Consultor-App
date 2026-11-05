@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const src=fs.readFileSync('dist/sheets-app.js','utf8'),start=src.indexOf('window.prepareSellerChanges='),end=src.indexOf('window.saveConsultorExtra=',start);
+let responses=[],events=[],formula=true,actual='=1+1';
+const ctx=vm.createContext({window:{confirm:msg=>{events.push(msg);return responses.shift();}},googleSource:true,serverMode:true,googleReady:true,gateway:{sellerCell:async()=>({value:actual,header:'Comentarios',hasFormula:formula}),formulaConsent:async(binding,step,token)=>{events.push(step);if(step===2)assert.equal(token,'stage1');return {token:'stage'+step};}}});
+vm.runInContext(src.slice(start,end),ctx);
+const change={sellerId:'123',column:5,value:'',expected:'=1+1',header:'Comentarios'};
+responses=[false];assert.equal(await ctx.window.prepareSellerChanges([change]),null);assert.equal(events.length,1);
+events=[];responses=[true,false];assert.equal(await ctx.window.prepareSellerChanges([change]),null);assert.equal(events[1],1);assert.equal(events.length,3);
+events=[];responses=[true,true];const prepared=await ctx.window.prepareSellerChanges([change]);assert.equal(prepared[0].formulaApproval,'stage2');assert.equal(events[3],2);assert(events[0].includes('Comentarios'));assert(events[2].includes('eliminar'));
+events=[];formula=false;actual='=literal';const plain=await ctx.window.prepareSellerChanges([{...change,expected:actual}]);assert.equal(events.length,0);assert.equal(plain[0].formulaApproval,undefined);
+actual='changed';await assert.rejects(()=>ctx.window.prepareSellerChanges([change]),/cambió/);
+console.log('PASS: cancel first or second confirmation stops preparation; both confirmations name the formula field; deletion requires both; literal text beginning with = receives no unnecessary confirmation; stale cells fail closed.');

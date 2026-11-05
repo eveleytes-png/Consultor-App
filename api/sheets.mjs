@@ -1,7 +1,8 @@
 /* Shared server connection, like MisionesMP. Never expose service credentials. */
 import {createHmac,timingSafeEqual,randomUUID} from 'node:crypto';
+import {createGeocoder,coordinates,addressColumn} from '../lib/geolocation.mjs';
 import {sheetLock} from './sheets-lock.mjs';
-const FILE='1yKyxi4zM3XBVc7-XY3gDZ9TiWrdpbnTdoOUq5p9n73E';
+export const FILE='1yKyxi4zM3XBVc7-XY3gDZ9TiWrdpbnTdoOUq5p9n73E';
 const TABS={192864634:'Base Consultor App',500157585:'Points_ConsultoresApp',1266882678:'Links_ConsultoresApp'};
 const CLIENT='503544568734-pb0dmd3mud6in8eeiigvpps8v26u6s5v.apps.googleusercontent.com';
 const COOKIE='__Host-consultor-session';
@@ -38,9 +39,18 @@ function authorizeOperation(path,body){
 }
 async function defaultIdentity(credential,client){const {OAuth2Client}=await import('google-auth-library');const ticket=await new OAuth2Client(client).verifyIdToken({idToken:credential,audience:client});return ticket.getPayload();}
 async function defaultGoogle(c,path,body,mode){const {JWT}=await import('google-auth-library');const key=c.email+':'+mode;let auth=googleClients.get(key);if(!auth){auth=new JWT({email:c.email,key:c.key,scopes:['https://www.googleapis.com/auth/spreadsheets']});googleClients.set(key,auth);}const result=await auth.request({url:'https://sheets.googleapis.com/v4/spreadsheets/'+FILE+path,method:body?'POST':'GET',data:body,timeout:15000});return result.data;}
-export function createHandler({env=process.env,verifyIdentity=defaultIdentity,googleRequest=defaultGoogle,lock=sheetLock}={}){let snapshot=null,snapshotAt=0,snapshotPending=null,generation=0;
+export function createHandler({env=process.env,verifyIdentity=defaultIdentity,googleRequest=defaultGoogle,lock=sheetLock,geocode=createGeocoder({env})}={}){let snapshot=null,snapshotAt=0,snapshotPending=null,generation=0;
 const readValues=async(c,range,render='FORMATTED_VALUE')=>{const data=await googleRequest(c,'/values:batchGetByDataFilter',{dataFilters:[{gridRange:range}],majorDimension:'ROWS',valueRenderOption:render},'read');return data.valueRanges?.[0]?.valueRange?.values||[];};
 const rawCell=async(c,row,column)=>String((await readValues(c,{sheetId:192864634,startRowIndex:row,endRowIndex:row+1,startColumnIndex:column,endColumnIndex:column+1},'FORMULA'))[0]?.[0]??'');
+const cellDetails=async(c,row,column)=>{
+ const path='?ranges='+encodeURIComponent("'Base Consultor App'!"+String.fromCharCode(65+column)+(row+1))+'&includeGridData=true&fields=sheets(data(rowData(values(userEnteredValue))))';
+ const data=await googleRequest(c,path,null,'read');
+ const entered=data.sheets?.[0]?.data?.[0]?.rowData?.[0]?.values?.[0]?.userEnteredValue;
+ if(!data.sheets)throw fail('No se pudo comprobar si la celda contiene una fórmula. No se modificó la planilla.',502);
+ return {value:String(entered?.formulaValue??entered?.stringValue??entered?.numberValue??entered?.boolValue??''),hasFormula:typeof entered?.formulaValue==='string'};
+};
+const proof=(c,payload)=>{const data=b64(JSON.stringify(payload));return data+'.'+createHmac('sha256',c.secret||c.key).update(data).digest('base64url');};
+const checkProof=(c,token,payload)=>{try{const [data,signature]=String(token||'').split('.'),decoded=JSON.parse(Buffer.from(data,'base64url'));return decoded.exp>Date.now()&&proof(c,decoded)===data+'.'+signature&&Object.entries(payload).every(([k,v])=>decoded[k]===v);}catch{return false;}};
 return async(req,res)=>{
  res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');
  const send=(status,value)=>res.status(status).json(value),c=config(env);
@@ -59,16 +69,37 @@ return async(req,res)=>{
   }
   if(loginRequired(env)&&!session(req.headers.cookie,c))throw fail('Ingresá con tu cuenta de Google para consultar la planilla.',401);
   if(body.operation==='logout'){res.setHeader('Set-Cookie',`${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);return send(200,{authenticated:false});}
+  if(body.operation==='geolocateSellers'){
+   if(Object.keys(body).some(k=>!['operation','sellerIds'].includes(k))||!Array.isArray(body.sellerIds)||body.sellerIds.length>5||body.sellerIds.some(id=>typeof id!=='string'||!id||id.length>200))throw fail('Solicitud de ubicación inválida.');
+   const rows=await readValues(c,{sheetId:192864634,startRowIndex:0}),headers=rows[0]||[],col=addressColumn(headers),latcol=headers.findIndex(h=>/^lat(?:log|long)$/i.test(String(h).trim()));
+   const results=[];
+   for(const id of body.sellerIds){const matches=rows.slice(1).filter(r=>String(r[15]??'')===id);if(matches.length!==1){results.push({sellerId:id,address:'',status:'unresolved',coordinates:null});continue;}
+    const row=matches[0],address=String(row[col]??'');
+    results.push({sellerId:id,address,...(coordinates(String(row[latcol]??''))?{status:'primary',coordinates:null}:await geocode(address))});
+   }
+   return send(200,{results});
+  }
+  if(body.operation==='formulaConsent'){
+   const {sellerId,column,expected,value,header,step,token}=body;
+   if(Object.keys(body).some(k=>!['operation','sellerId','column','expected','value','header','step','token'].includes(k))||typeof sellerId!=='string'||!sellerId||sellerId.length>200||!Number.isInteger(column)||column<0||column>14||typeof expected!=='string'||typeof value!=='string'||value.length>10000||typeof header!=='string'||![1,2].includes(step))throw fail('Confirmación inválida.');
+   const rows=await readValues(c,{sheetId:192864634,startRowIndex:0}),matches=rows.map((row,index)=>({row,index})).filter(r=>r.index>0&&String(r.row[15]??'')===sellerId);
+   if(matches.length!==1||rows[0]?.[column]!==header)throw fail('Cambió el comercio o el campo. Actualizá antes de guardar.',409);
+   const cell=await cellDetails(c,matches[0].index,column);if(!cell.hasFormula||cell.value!==expected)throw fail('La fórmula cambió. Cerrá la edición y revisá el dato.',409);
+   const binding={sellerId,column,expected,value,header};
+   if(step===2&&!checkProof(c,token,{...binding,step:1}))throw fail('Falta la primera confirmación de la fórmula.',409);
+   return send(200,{token:proof(c,{...binding,step,exp:Date.now()+300000})});
+  }
   if(body.operation==='sellerCell'){
+
    if(Object.keys(body).some(k=>!['operation','sellerId','column'].includes(k))||typeof body.sellerId!=='string'||!body.sellerId||body.sellerId.length>200||!Number.isInteger(body.column)||body.column<0||body.column>14)throw fail('Solo se editan celdas de A a O.');
    const rows=await readValues(c,{sheetId:192864634,startRowIndex:0});const matches=rows.map((row,index)=>({row,index})).filter(r=>r.index>0&&String(r.row[15]??'')===body.sellerId);
    if(matches.length!==1)throw fail('No se encuentra un comercio único con ese ID.',409);
-   return send(200,{value:await rawCell(c,matches[0].index,body.column),header:String(rows[0]?.[body.column]??'')});
+   return send(200,{...await cellDetails(c,matches[0].index,body.column),header:String(rows[0]?.[body.column]??'')});
   }
   if(body.operation==='editSeller'){
    if(env.GOOGLE_SELLER_WRITES_ENABLED!=='true')throw fail('El guardado en BaseApp todavía está pendiente de verificación. No se modificó la planilla.',503);
    const {sellerId,column,value,expected,header}=body;
-   if(Object.keys(body).some(k=>!['operation','sellerId','column','value','expected','header'].includes(k))||typeof sellerId!=='string'||!sellerId||sellerId.length>200||!Number.isInteger(column)||column<0||column>14||typeof value!=='string'||value.length>10000||typeof expected!=='string'||typeof header!=='string')throw fail('Solo se editan celdas de A a O.');
+   if(Object.keys(body).some(k=>!['operation','sellerId','column','value','expected','header','formulaApproval'].includes(k))||typeof sellerId!=='string'||!sellerId||sellerId.length>200||!Number.isInteger(column)||column<0||column>14||typeof value!=='string'||value.length>10000||typeof expected!=='string'||typeof header!=='string')throw fail('Solo se editan celdas de A a O.');
    const owner=randomUUID();if(!await lock('acquire',owner))throw fail('Otro guardado está en curso o pendiente de confirmar. Actualizá antes de reintentar.',409);
    let writing=false,confirmed=false;
    try{
@@ -77,9 +108,10 @@ return async(req,res)=>{
     if(idColumn!==15||String(rows[0]?.[column]??'')!==header)throw fail('Cambió la estructura de BaseApp. Actualizá antes de guardar.',409);
     const matches=rows.map((row,index)=>({row,index})).filter(r=>r.index>0&&String(r.row[idColumn]??'')===sellerId);
     if(matches.length!==1)throw fail('No se encuentra un comercio único con ese ID.',409);
-    const {row,index}=matches[0];if(await rawCell(c,index,column)!==expected)throw fail('Este dato cambió en Sheets u otro dispositivo. Cerrá la edición y revisá el valor actualizado.',409);
+    const {row,index}=matches[0],original=await cellDetails(c,index,column);if(original.value!==expected)throw fail('Este dato cambió en Sheets u otro dispositivo. Cerrá la edición y revisá el valor actualizado.',409);
     if(column===0&&(!value.trim()||rows.some((r,i)=>i>0&&i!==index&&String(r[0]??'').trim().toLowerCase()===value.trim().toLowerCase())))throw fail('El mail es obligatorio y no puede repetirse.');
     if(value===expected){confirmed=true;return send(200,{saved:true});}
+    if(original.hasFormula&&!checkProof(c,body.formulaApproval,{sellerId,column,expected,value,header,step:2}))throw fail('El campo contiene una fórmula. Se requieren ambas confirmaciones antes de reemplazarla o eliminarla.',409);
     if(!await lock('mark',owner))throw fail('Venció la protección del guardado. No se modificó la planilla.',409);writing=true;
     generation++;snapshot=null;snapshotAt=0;snapshotPending=null;
     try{await googleRequest(c,':batchUpdate',{requests:[{updateCells:{range:{sheetId:192864634,startRowIndex:index,endRowIndex:index+1,startColumnIndex:column,endColumnIndex:column+1},rows:[{values:[{userEnteredValue:sellerCellValue(column,value)}]}],fields:'userEnteredValue'}}]},'write');}

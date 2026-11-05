@@ -36,7 +36,7 @@ function workspaceFollowCell(s,label){
  return escapeHtml(String(value??'').trim()||'—');
 }
 function workspaceContacts(s){
- const wa=String(s.whatsapp||s.telefono1||'').replace(/\D/g,''),coords=parseLatLog(s.latlog);
+ const wa=String(s.whatsapp||s.telefono1||'').replace(/\D/g,''),coords=sellerCoordinates(s);
  return `<div class="seller-actions">${coords?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coords.join(','))}" target="_blank" rel="noopener noreferrer" aria-label="Ver ubicación de ${escapeHtml(s.n)}">${icon('pin')}</a>`:`<button disabled aria-label="Sin ubicación">${icon('pin')}</button>`}${wa?`<a href="https://wa.me/${wa}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp de ${escapeHtml(s.n)}">${icon('chat')}</a>`:`<button disabled aria-label="Sin WhatsApp">${icon('chat')}</button>`}</div>`;
 }
 function workspaceFollowRows(){return sellers.filter(s=>String(s.e||'').trim()&&workspaceStatuses(s).length).filter(s=>!workspaceSearch||normalizeAnswer(s.n).includes(normalizeAnswer(workspaceSearch))).filter(s=>!workspaceFollowFilter||workspaceStatuses(s).some(v=>workspaceFollowFilter==='sin-aceptacion'?v==='Sin aceptación':workspaceFollowFilter==='no-pointer'?v.startsWith('No Pointer'):v.startsWith('No QR')));}

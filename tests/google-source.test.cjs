@@ -22,7 +22,7 @@ const b=api.snapshot();ctx.activities.push({id:'new-task'});await api.persistRem
 const p=api.snapshot();ctx.liveEquipment.push({id:'p',type:'Propio',serial:'123TEST',status:'Disponible'});await api.persistRemote(p,api.snapshot());assert.deepEqual(tables[1][0],STOCK_HEADERS);assert.equal(tables[1][1][0],'p');assert.equal(saved.equipment[0].id,'old-point');
 const l=api.snapshot();ctx.usefulLinks.push({id:'l',url:'https://example.com/',comment:'test',copyText:'',favorite:false});await api.persistRemote(l,api.snapshot());assert.deepEqual(tables[2][0],LINK_HEADERS);assert.equal(tables[2][1][0],'l');assert.equal(tables[192864634].length,2);assert.ok(writes.every(b=>b.requests.every(r=>!r.updateCells||r.updateCells.range.sheetId!==192864634)));
 let dialogKind='readonly',detailRefreshes=0;
-ctx.document={hidden:false,querySelector:selector=>selector==='dialog[open]:not(.configured-detail)'&&dialogKind==='editing'?{}:null};
+ctx.document={hidden:false,querySelector:selector=>selector==='dialog[open]:not(.configured-detail):not(.unlocated-dialog)'&&dialogKind==='editing'?{}:null};
 ctx.window.refreshOpenSellerDetails=()=>detailRefreshes++;
 tables[192864634][1][1]='updated while detail is open';await api.refreshRemote();assert.equal(ctx.sellers[0].sourceValues[1],'updated while detail is open');assert.equal(detailRefreshes,1);
 dialogKind='editing';tables[192864634][1][1]='received during editing';await api.refreshRemote();assert.equal(ctx.sellers[0].sourceValues[1],'updated while detail is open');assert.equal(detailRefreshes,1);

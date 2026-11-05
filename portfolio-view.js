@@ -30,7 +30,7 @@
     if(button&&!button.querySelector('.cartera-action-icon'))button.insertAdjacentHTML('afterbegin',`<svg class="cartera-action-icon" viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`);
    }
    // These use precisely the existing filtering and coordinate-validation functions.
-   const rows=filteredSellers(),located=rows.filter(s=>parseLatLog(s.latlog)).length;
+   const rows=filteredSellers(),located=rows.filter(s=>sellerCoordinates(s)).length;
    let summary=root.querySelector(':scope>.cartera-stats');
    if(!summary){summary=document.createElement('div');summary.className='cartera-stats';summary.setAttribute('aria-label','Resumen de los comercios filtrados');tools.after(summary);}
    const html=`${[[rows.length,'Comercios'],[located,'Con ubicación'],[rows.length-located,'Sin ubicación']].map(([n,label])=>`<div><strong>${n}</strong><span>${label}</span></div>`).join('')}${bobbinHTML(rows)}`;

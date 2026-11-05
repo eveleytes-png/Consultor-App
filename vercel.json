@@ -3,5 +3,5 @@
   "framework": null,
   "buildCommand": "node tools/build-static.cjs",
   "outputDirectory": "dist",
-  "functions": {"api/notifications.mjs": {"maxDuration": 300}}
+  "functions": {"api/sheets.mjs": {"maxDuration": 60},"api/notifications.mjs": {"maxDuration": 300}}
 }

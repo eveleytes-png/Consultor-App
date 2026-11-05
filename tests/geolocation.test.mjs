@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import fs from 'node:fs';
+import {strictResult,createGeocoder,coordinates,addressColumn} from '../lib/geolocation.mjs';
+const address='Ayacucho 1376, Posadas, Misiones, Argentina';
+const exact={query:{parsed:{street:'Ayacucho',housenumber:'1376',city:'Posadas',state:'Misiones'}},results:[{street:'Ayacucho',housenumber:'1376',city:'Posadas',state:'Misiones',country_code:'ar',result_type:'building',lat:-27.37,lon:-55.9,rank:{confidence:1,confidence_building_level:1,confidence_street_level:1,match_type:'full_match'}}]};
+assert.deepEqual(strictResult(exact,address),[-27.37,-55.9]);
+for(const patch of [{result_type:'street'},{result_type:'city'},{housenumber:'1378'},{city:'Garupá'},{country_code:'py'},{lat:100},{rank:{...exact.results[0].rank,match_type:'match_by_street'}},{rank:{...exact.results[0].rank,confidence:.99}},{rank:{...exact.results[0].rank,confidence_building_level:.9}}]){
+ const data=structuredClone(exact);Object.assign(data.results[0],patch);assert.equal(strictResult(data,address),null);
+}
+assert.equal(strictResult({...exact,results:[exact.results[0],exact.results[0]]},address),null);
+assert.equal(strictResult({results:[]},address),null);assert.equal(strictResult(exact,'Ayacucho s/n, Posadas'),null);
+assert.equal(strictResult(exact,'Ayacucho, Posadas'),null);
+assert.deepEqual(coordinates(' -27.3 ; -55.9 '),[-27.3,-55.9]);assert.equal(addressColumn(['Mail','Dirección']),1);assert.equal(coordinates('-27,'),null);
+let calls=0,clock=0;const geocode=createGeocoder({env:{GEOAPIFY_API_KEY:'server-secret'},now:()=>clock,request:async url=>{calls++;assert.equal(url.hostname,'api.geoapify.com');return {ok:true,json:async()=>exact};}});
+await Promise.all([geocode(address),geocode(address)]);assert.equal(calls,1);await geocode(address);assert.equal(calls,1);clock=86400001;await geocode(address);assert.equal(calls,2);
+assert.equal((await createGeocoder({env:{}})(address)).status,'unavailable');
+const failing=createGeocoder({env:{GEOAPIFY_API_KEY:'x'},request:async()=>{throw Error('offline');}});assert.equal((await failing(address)).coordinates,null);
+const sellers=[{id:'1',latlog:'-28,-56',sourceValues:['',address]},{id:'2',latlog:'invalid',sourceValues:['',address]}];
+const ctx=vm.createContext({window:{},Date,Map,Set,Array,sellers,portfolioHeaders:['Mail','Dirección'],page:'inicio',document:{querySelector(){return null;}},parseLatLog:coordinates});
+vm.runInContext(fs.readFileSync('dist/geolocation.js','utf8'),ctx);
+let ids;await ctx.window.resolveSellerLocations(async list=>{ids=list;return {results:[{sellerId:'2',address,status:'resolved',coordinates:[-27.37,-55.9]}]};});assert.equal(ids.join(','),'2');
+const loc=s=>ctx.s=s,run=s=>vm.runInContext(s,ctx);
+ctx.s=sellers[1];assert.equal(run('sellerCoordinates(s).join()'),'-27.37,-55.9');
+await ctx.window.resolveSellerLocations(async()=>{throw Error('cache should avoid request');});assert.equal(run('sellerCoordinates(s).join()'),'-27.37,-55.9');
+sellers[1].sourceValues[1]='Nueva 123, Posadas';assert.equal(run('sellerCoordinates(s)'),null);
+let finish;const pending=ctx.window.resolveSellerLocations(()=>new Promise(r=>finish=r));sellers[1].latlog='-29,-57';finish({results:[{sellerId:'2',address:'Nueva 123, Posadas',status:'resolved',coordinates:[-27,-55]}]});await pending;assert.equal(run('sellerCoordinates(s).join()'),'-29,-57');
+sellers[1].latlog='';await ctx.window.resolveSellerLocations(async()=>{throw Error('offline');});assert.equal(run('sellerCoordinates(s)'),null);
+ctx.window.clearSellerGeocodes();assert.equal(run('sellerGeocodes.size'),0);
+console.log('PASS: strict precision, ambiguity and incomplete addresses rejected; provider dedup/cache/errors; primary coordinates bypass geocoding; address changes and delayed responses cannot reuse stale positions; logout clears cache.');
