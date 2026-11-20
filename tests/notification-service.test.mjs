@@ -14,8 +14,14 @@ function setup(){
  const store=new MemoryStore(),sent=[];
  const providers={emailConfigured:true,telegramConfigured:true,configureTelegramWebhook:async()=>true,email:async(...a)=>{sent.push(['email',...a]);return 'email-id';},telegram:async(...a)=>{sent.push(['telegram',...a]);return 'telegram-id';}};
  let rows=[['Mail','Cust_id comercio','Nombre del comercio','Aceptación','Encuesta valida','Blindaje'],['m@example.com','1','Comercio','Si','No','']];
- const service=new NotificationService({env,store,providers,google:async()=>({valueRanges:[{valueRange:{values:structuredClone(rows)}}]})});
- return {service,store,sent,providers,setRows:r=>{rows=r;}};
+ let imported=structuredClone(rows);
+ const service=new NotificationService({env,store,providers,google:async(c,path,body,mode)=>{
+  assert.equal(mode,'read');
+  assert.ok(!path.includes('batchUpdate'));
+  if(path.startsWith('?'))return {sheets:[{properties:{sheetId:192864634,title:'Base Consultor App'}},{properties:{sheetId:7,title:'Base importada'}}]};
+  return {valueRanges:body.dataFilters.map(({gridRange})=>({dataFilters:[{gridRange}],valueRange:{values:structuredClone(gridRange.sheetId===7?imported:rows)}}))};
+ }});
+ return {service,store,sent,providers,setRows:r=>{rows=r;},setImported:r=>{imported=r;}};
 }
 const now=new Date('2026-10-21T15:00:00Z');
 test('Remitente Resend de prueba exige correo del titular; dominio propio admite otro destino',async()=>{
@@ -42,15 +48,30 @@ test('Sin configuración y antes de hora no envía',async()=>{
  const x=setup();x.store.state.emailVerified=false;delete x.store.state.telegramChat;await x.service.run(now);assert.equal(x.sent.length,0);
  x.store.state.emailVerified=true;x.store.state.time='20:00';await x.service.run(now);assert.equal(x.sent.length,0);
 });
-test('Diferencias persisten, vacíos/duplicados no generan bajas y revisión comprueba versión',async()=>{
- const x=setup();await x.service.refreshSource('owner@example.com');
+test('Las diferencias persisten al revisar y sus detalles requieren sesión',async()=>{
+ const x=setup(),owner='owner@example.com';
  const headers=['Mail','Cust_id comercio','Nombre del comercio','Aceptación','Encuesta valida','Blindaje'];
- x.setRows([headers,['new@example.com','2','Nuevo','No','','']]);await x.service.refreshSource('owner@example.com');
- assert.equal(x.store.state.pendingChanges.length,2);await x.service.refreshSource('owner@example.com');assert.equal(x.store.state.pendingChanges.length,2);
- const version=x.store.state.sourceVersion;x.setRows([headers]);await assert.rejects(()=>x.service.refreshSource('owner@example.com'));assert.equal(x.store.state.pendingChanges.length,2);
- x.setRows([headers,['a','2','A','No','',''],['b','2','B','No','','']]);await assert.rejects(()=>x.service.refreshSource('owner@example.com'));assert.equal(x.store.state.pendingChanges.length,2);
- await assert.rejects(()=>x.service.reviewChanges('owner@example.com',version));
- x.setRows([headers,['new@example.com','2','Nuevo','No','','']]);await x.service.reviewChanges('owner@example.com',version);assert.equal(x.store.state.archive.length,2);assert.equal(x.store.state.pendingChanges.length,0);
+ x.setImported([headers,['different@example.com','1','Mismo ID','Si','No',''],['new@example.com','2','Nuevo','No','','']]);
+ await x.service.refreshSource(owner);
+ assert.deepEqual(x.store.state.pendingChanges.map(c=>[c.kind,c.id]),[['add','id:2']]);
+ assert.deepEqual((await x.service.status(owner)).changes,[]);
+ assert.equal((await x.service.status(owner,true)).changes.length,1);
+ x.setImported([headers,['m@example.com','1','Mismo ID','Si','No','']]);
+ await x.service.reviewChanges(owner);
+ assert.equal(x.store.state.pendingChanges.length,1);
+ assert.equal(x.store.state.pendingChanges[0].applicable,false);
+});
+test('La conciliación cuenta altas y bajas sin exponer comercios ni borrar pendientes ante una carga vacía',async()=>{
+ const x=setup(),owner='owner@example.com';
+ const headers=['Mail','Cust_id comercio','Nombre del comercio','Aceptación','Encuesta valida','Blindaje'];
+ x.setImported([headers,['new@example.com','2','Nombre confidencial','No','','']]);
+ const preview=await x.service.preview(owner,now);
+ assert.match(preview,/Hay 1 comercio para agregar y 1 para eliminar/);
+ assert.doesNotMatch(preview,/Nombre confidencial|new@example\.com|m@example\.com|id:2/);
+ x.setImported([headers]);
+ await x.service.preview(owner,now);
+ assert.equal(x.store.state.pendingChanges.length,2);
+ assert.match(x.store.state.portfolioReviewError,/No pudimos verificar/);
 });
 test('Correo: código, caducidad lógica, límite de intentos y cambio de dirección',async()=>{
  const x=setup();x.store.state.emailVerified=false;await x.service.sendCode('owner@example.com');

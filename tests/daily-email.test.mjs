@@ -39,7 +39,7 @@ test('Correo: oculta cero, muestra solo 12 o ambos, sin cambiar texto de Telegra
   assert.equal(message.html.includes('Seguimiento de encuestas'),!!a);
   for(const format of [message.text,message.html]){
    assert.equal(format.includes('más de 12 meses'),!!a);assert.equal(format.includes('más de 18 meses'),!!b);
-   assert(format.includes('no presenta cambios pendientes'));assert(format.includes('No tenés actividades pendientes.'));
+   assert(format.includes('No hubo modificaciones en tu cartera'));assert(format.includes('No tenés actividades pendientes.'));
   }
   assert(!composeDailyText(summary,'https://example.com').includes('Seguimiento de encuestas'));
  }

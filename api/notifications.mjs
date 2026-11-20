@@ -1,4 +1,4 @@
-import {requireConsultant,singleConsultant} from './sheets.mjs';
+import {requireConsultant,singleConsultant,readSession,serverConfig} from './sheets.mjs';
 import {NotificationService,safeEqual} from '../lib/notification-service.mjs';
 export function createNotificationHandler({env=process.env,service=new NotificationService({env})}={}){
  return async(req,res)=>{
@@ -14,7 +14,8 @@ export function createNotificationHandler({env=process.env,service=new Notificat
     catch(e){await service.store.update(singleConsultant(env),s=>{s.lastError='No se pudo generar el resumen. Revisá la fuente, agenda y configuración del servidor.';});throw e;}
    }
    const owner=requireConsultant(req,env);
-   if(req.method==='GET')return res.status(200).json(await service.status(owner));
+   const privateSession=readSession(req.headers.cookie,serverConfig(env))?.email===owner;
+   if(req.method==='GET')return res.status(200).json(await service.status(owner,privateSession));
    if(req.method!=='POST')return res.status(405).json({error:'Método no permitido.'});
    switch(b?.operation){
     case 'configure':await service.configure(owner,b);break;
@@ -23,12 +24,14 @@ export function createNotificationHandler({env=process.env,service=new Notificat
     case 'telegramLink':case 'confirmTelegram':return res.status(410).json({error:'Solo se permiten notificaciones por email.'});
     case 'unlinkTelegram':await service.store.update(owner,s=>{delete s.telegramChat;delete s.pendingChat;if(s.challenges)delete s.challenges.telegram;for(const job of Object.values(s.jobs||{}))if(job.channel==='telegram'&&['pending','retry'].includes(job.status))job.status='skipped';});break;
     case 'refresh':await service.refreshSource(owner);break;
-    case 'review':await service.reviewChanges(owner,b.version);break;
+    case 'review':
+     if(!privateSession)return res.status(401).json({error:'Ingresá con tu cuenta de Google para revisar cambios.'});
+     await service.reviewChanges(owner);break;
     case 'sendTest':return res.status(200).json(await service.sendTest(owner,b.requestId));
     case 'preview':return res.status(200).json({text:await service.preview(owner)});
     default:return res.status(400).json({error:'Operación no permitida.'});
    }
-   return res.status(200).json(await service.status(owner));
+   return res.status(200).json(await service.status(owner,privateSession));
   }catch(e){return res.status(e.status||503).json({error:e.status?e.message:'No se pudo completar la operación. Revisá la configuración del servidor.'});}
  };
 }
