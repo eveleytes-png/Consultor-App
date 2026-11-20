@@ -63,7 +63,7 @@
    const changes=items(stage),chosen=selected[stage];
    const list='<div class="planilla-columns">'+changes.map(change=>'<label><input type="checkbox" data-choice="'+escapeHtml(change.id)+'"'+
     (chosen.has(change.id)?' checked':'')+'><span>'+escapeHtml(change.name)+'</span></label>').join('')+'</div>';
-   const description=stage==='remove'?'Tildá los comercios que querés archivar en Comercios eliminados y quitar de Base Consultor App.':
+   const description=stage==='remove'?'Tildá los comercios que querés archivar en ComerciosEliminados y quitar de Base Consultor App.':
     'Tildá los comercios que querés incorporar a Base Consultor App.';
    const count='<p class="planilla-count" data-selected-count></p>';
    return progress()+panel(labels[stage],description,count+button('Seleccionar todos','toggle')+list)+footer(button('Volver','back'),button('Continuar','next','primary'));

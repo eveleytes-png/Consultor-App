@@ -3,9 +3,8 @@ import assert from 'node:assert/strict';
 
 import {NotificationService} from '../lib/notification-service.mjs';
 
-const headers=['Mail','Cust_id comercio','Nombre del comercio','Aceptación','Encuesta valida','Blindaje'];
-const merchant=(id,email='m'+id+'@example.com')=>[email,id,'Comercio '+id,'Si','No',''];
-const index=(...rows)=>indexMerchants([headers,...rows],'Prueba',{allowEmpty:true});
+const headers=['Mail','Comentarios','Nombre del comercio','Aceptación','Encuesta valida','Blindaje',...Array(9).fill(''),'Cust_id comercio','Dato calculado','Dato fijo'];
+const merchant=(id,email='m'+id+'@example.com')=>[email,'','Comercio '+id,'Si','No','',...Array(9).fill(''),id,'Calculado '+id,'No copiar'];
 const owner='owner@example.com';
 const activeId=192864634;
 const col=(text)=>text===''?{}:{userEnteredValue:{stringValue:text},effectiveValue:{stringValue:text},formattedValue:text};
@@ -31,9 +30,10 @@ function setup(){
  const google=async(_,path,body)=>{
   if(path.startsWith('?fields'))return {sheets:[tab(activeId,'Base Consultor App'),tab(7,'Base importada'),...(archive?[archive]:[])].map(properties=>({properties}))};
   if(path.startsWith('?ranges=')){
-   const scope=decodeURIComponent(path),archived=scope.includes('Comercios eliminados'),source=scope.includes('Base importada');
+   const scope=decodeURIComponent(path),archived=scope.includes('ComerciosEliminados'),source=scope.includes('Base importada');
    const rows=(archived?archiveRows:(source?imported:active).map(row=>row.map(col))).map(values=>({values}));
    if(!archived&&!source&&rows[1])rows[1].values[2]={userEnteredValue:{formulaValue:'=B2'},effectiveValue:col(active[1][2]).effectiveValue,formattedValue:active[1][2]};
+   if(!archived&&!source&&rows[2])rows[2].values[16]={userEnteredValue:{formulaValue:'=A3'},effectiveValue:col(active[2][16]).effectiveValue,formattedValue:active[2][16]};
    if(!archived&&!source&&afterGrid){const edit=afterGrid;afterGrid=null;edit(active);}
    return {sheets:[{properties:{sheetId:archived?archive.sheetId:source?7:activeId},data:[{rowData:rows}]}]};
   }
@@ -64,9 +64,7 @@ function setup(){
   if(mode==='release')lockOwner=null;
   return true;
  };
- const env={PORTFOLIO_WORKFLOW_ENABLED:'true',PORTFOLIO_ACTIVE_SHEET_ID:String(activeId),PORTFOLIO_WRITES_ENABLED:'true',PORTFOLIO_ADD_COLUMNS:JSON.stringify({
-  seed:{Mail:'Mail','Cust_id comercio':'Cust_id comercio'},formulas:['Nombre del comercio'],templateRow:2
- })};
+ const env={PORTFOLIO_WRITES_ENABLED:'true'};
  const service=new NotificationService({env,google,store,portfolioLock:lock});
  return {service,state,writes,archiveRows,setImported:rows=>{imported=[headers,...rows];},setCell:(row,col,value)=>{active[row][col]=value;},loseResponse:()=>{loseResponse=true;},editAfterGrid:edit=>{afterGrid=edit;}};
 }
@@ -82,6 +80,9 @@ test('El enlace conserva los pendientes y el servidor aplica únicamente la sele
  assert.equal(f.state.pendingChanges.length,3);
  assert.equal(f.writes.length,0);
  assert.equal((await workflow.apply(owner,'add',['id:3']))[0].applied,true);
+ const addRequests=f.writes[0];
+ assert.deepEqual(addRequests.filter(r=>r.updateCells).map(r=>[r.updateCells.range.startColumnIndex,r.updateCells.rows[0].values[0].userEnteredValue]),[[0,{stringValue:'m3@example.com'}]]);
+ assert.deepEqual(addRequests.filter(r=>r.copyPaste).map(r=>[r.copyPaste.source.startRowIndex,r.copyPaste.source.startColumnIndex,r.copyPaste.destination.startRowIndex,r.copyPaste.pasteType]),[[2,16,3,'PASTE_FORMULA']]);
  assert.equal(f.state.pendingChanges.length,2);
  f.loseResponse();
  assert.equal((await workflow.apply(owner,'remove',['id:1']))[0].applied,false);
@@ -89,8 +90,11 @@ test('El enlace conserva los pendientes y el servidor aplica únicamente la sele
  assert.ok(f.writes[1].at(-1).deleteDimension);
  assert.equal((await workflow.apply(owner,'remove',['id:1']))[0].applied,true);
  assert.deepEqual(f.state.pendingChanges.map(change=>change.id),['id:4']);
- assert.equal(f.archiveRows[1][2].effectiveValue.stringValue,'Comercio 1');
- assert.equal(f.archiveRows[1][5].effectiveValue.stringValue,'Último dato manual');
+ assert.equal(f.writes[1].find(r=>r.addSheet).addSheet.properties.title,'ComerciosEliminados');
+ assert.equal(f.archiveRows[0][0].effectiveValue.stringValue,'Fecha de eliminación');
+ assert.match(f.archiveRows[1][0].effectiveValue.stringValue,/^\d{4}-\d{2}-\d{2}$/);
+ assert.equal(f.archiveRows[1][3].effectiveValue.stringValue,'Comercio 1');
+ assert.equal(f.archiveRows[1][6].effectiveValue.stringValue,'Último dato manual');
  assert.equal(f.writes.length,2);
 });
 
@@ -103,4 +107,18 @@ test('Una baja sin copia íntegra o con la fuente vacía no escribe',async()=>{
  await f.service.refreshSource(owner);
  assert.equal((await f.service.workflow.apply(owner,'remove',['id:1']))[0].applied,false);
  assert.equal(f.writes.length,0);
+});
+
+test('La próxima baja solo anexa una fila en ComerciosEliminados',async()=>{
+ const f=setup();
+ await f.service.refreshSource(owner);
+ f.setImported([merchant('2'),merchant('3')]);
+ await f.service.refreshSource(owner);
+ assert.equal((await f.service.workflow.apply(owner,'remove',['id:1']))[0].applied,true);
+ const history=structuredClone(f.archiveRows);
+ f.setImported([merchant('3')]);
+ await f.service.refreshSource(owner);
+ assert.equal((await f.service.workflow.apply(owner,'remove',['id:2']))[0].applied,true);
+ assert.deepEqual(f.archiveRows.slice(0,history.length),history);
+ assert.deepEqual(f.writes[1].map(request=>Object.keys(request)[0]),['appendCells','deleteDimension']);
 });
