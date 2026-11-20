@@ -115,3 +115,5 @@ body.workspace-menu-open{overflow:hidden}
  .workspace-drawer .workspace-sidebar-bottom{padding-top:24px}
  .workspace-mobile-logo:focus-visible,.workspace-drawer-close:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
 }
+.workspace-top .workspace-notification.has-unread{background:#ffdf67;border-color:#e7ba3b;color:#523d06}
+.workspace-top .workspace-notification.has-unread i{width:9px;height:9px;background:#c91e2b;border-color:#ffdf67}

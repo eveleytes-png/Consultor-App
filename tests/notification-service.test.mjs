@@ -15,7 +15,7 @@ function setup(){
  const providers={emailConfigured:true,telegramConfigured:true,configureTelegramWebhook:async()=>true,email:async(...a)=>{sent.push(['email',...a]);return 'email-id';},telegram:async(...a)=>{sent.push(['telegram',...a]);return 'telegram-id';}};
  let rows=[['Mail','Cust_id comercio','Nombre del comercio','Aceptación','Encuesta valida','Blindaje'],['m@example.com','1','Comercio','Si','No','']];
  let imported=structuredClone(rows);
- const service=new NotificationService({env,store,providers,google:async(c,path,body,mode)=>{
+ const service=new NotificationService({env,store,providers,portfolioLock:async()=>true,google:async(c,path,body,mode)=>{
   assert.equal(mode,'read');
   assert.ok(!path.includes('batchUpdate'));
   if(path.startsWith('?'))return {sheets:[{properties:{sheetId:192864634,title:'Base Consultor App'}},{properties:{sheetId:7,title:'Base importada'}}]};
