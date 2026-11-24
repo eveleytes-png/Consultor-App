@@ -13,6 +13,7 @@ const b64=value=>Buffer.from(value).toString('base64url');
 export function sellerCellValue(column,value){return column>=7&&value.startsWith('=')?{formulaValue:value}:{stringValue:value};}
 function config(env){return {email:env.GOOGLE_SERVICE_ACCOUNT_EMAIL,key:env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g,'\n'),secret:env.AUTH_SECRET,client:env.AUTH_GOOGLE_ID||CLIENT,origin:env.APP_ORIGIN||'https://consultor-app.vercel.app',allowed:(env.AUTH_ALLOWED_EMAILS||'eveleytes@gmail.com').split(',').map(v=>v.trim().toLowerCase()).filter(Boolean)};}
 const loginRequired=env=>env.CONSULTOR_REQUIRE_LOGIN==='true';
+const sellerWritesAllowed=env=>env.GOOGLE_SELLER_WRITES_ENABLED!=='false';
 function configured(c,requireLogin=false){return !!(c.email&&c.key&&c.allowed.length&&(!requireLogin||c.secret?.length>=32));}
 function session(cookie,c){try{const raw=(cookie||'').split(';').map(v=>v.trim()).find(v=>v.startsWith(COOKIE+'='))?.slice(COOKIE.length+1);if(!raw)return null;const parts=raw.split('.');if(parts.length!==2)return null;const signature=createHmac('sha256',c.secret).update(parts[0]).digest(),supplied=Buffer.from(parts[1],'base64url');if(signature.length!==supplied.length||!timingSafeEqual(signature,supplied))return null;const value=JSON.parse(Buffer.from(parts[0],'base64url'));return value.exp>Date.now()/1000&&c.allowed.includes(value.email)?value:null;}catch{return null;}}
 function cookieFor(email,c){const payload=b64(JSON.stringify({email,exp:Math.floor(Date.now()/1000)+7*86400}));return `${COOKIE}=${payload}.${createHmac('sha256',c.secret).update(payload).digest('base64url')}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`;}
@@ -55,7 +56,7 @@ return async(req,res)=>{
  res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');
  const send=(status,value)=>res.status(status).json(value),c=config(env);
  try{
-  if(req.method==='GET'){const required=loginRequired(env),ready=configured(c,required);return send(200,{configured:ready,authenticated:ready&&!!session(req.headers.cookie,c),loginRequired:required,connectionReady:ready&&!required,privateStateEnabled:!!(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY),clientId:c.client,sellerWritesEnabled:env.GOOGLE_SELLER_WRITES_ENABLED==='true'});}
+  if(req.method==='GET'){const required=loginRequired(env),ready=configured(c,required),authenticated=ready&&!!session(req.headers.cookie,c);return send(200,{configured:ready,authenticated,loginRequired:required,connectionReady:ready&&!required,privateStateEnabled:!!(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY),clientId:c.client,sellerWritesEnabled:authenticated&&sellerWritesAllowed(env)});}
   if(req.method!=='POST'){res.setHeader('Allow','GET, POST');return send(405,{error:'Método no permitido.'});}
   if(!configured(c,loginRequired(env)))return send(503,{error:'Falta configurar la conexión compartida en Vercel.'});
   if(req.headers.origin!==c.origin)throw fail('Origen no autorizado.',403);
@@ -97,7 +98,8 @@ return async(req,res)=>{
    return send(200,{...await cellDetails(c,matches[0].index,body.column),header:String(rows[0]?.[body.column]??'')});
   }
   if(body.operation==='editSeller'){
-   if(env.GOOGLE_SELLER_WRITES_ENABLED!=='true')throw fail('El guardado en BaseApp todavía está pendiente de verificación. No se modificó la planilla.',503);
+   if(!session(req.headers.cookie,c))throw fail('Ingresá con Google para editar Base Consultor App.',401);
+   if(!sellerWritesAllowed(env))throw fail('La edición de Base Consultor App está deshabilitada.',503);
    const {sellerId,column,value,expected,header}=body;
    if(Object.keys(body).some(k=>!['operation','sellerId','column','value','expected','header','formulaApproval'].includes(k))||typeof sellerId!=='string'||!sellerId||sellerId.length>200||!Number.isInteger(column)||column<0||column>14||typeof value!=='string'||value.length>10000||typeof expected!=='string'||typeof header!=='string')throw fail('Solo se editan celdas de A a O.');
    const owner=randomUUID();if(!await lock('acquire',owner))throw fail('Otro guardado está en curso o pendiente de confirmar. Actualizá antes de reintentar.',409);

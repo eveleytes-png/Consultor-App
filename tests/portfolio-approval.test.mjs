@@ -122,3 +122,22 @@ test('La próxima baja solo anexa una fila en ComerciosEliminados',async()=>{
  assert.deepEqual(f.archiveRows.slice(0,history.length),history);
  assert.deepEqual(f.writes[1].map(request=>Object.keys(request)[0]),['appendCells','deleteDimension']);
 });
+
+test('Registrar requiere una sesión y nunca permite escribir Base importada',async()=>{
+ const f=setup(),workflow=f.service.workflow;
+ delete f.service.env.PORTFOLIO_WRITES_ENABLED;
+ const status=await f.service.status(owner);
+ assert.equal(status.registrationEnabled,true);
+ assert.equal(status.writesEnabled,false);
+ assert.equal((await f.service.status(owner,true)).writesEnabled,true);
+ const data=await workflow.read();
+ for(const request of [
+  {updateCells:{range:{sheetId:data.source.sheetId}}},
+  {deleteDimension:{range:{sheetId:data.source.sheetId}}},
+  {copyPaste:{source:{sheetId:activeId},destination:{sheetId:data.source.sheetId}}},
+  {appendCells:{sheetId:data.source.sheetId}}
+ ]){
+  assert.throws(()=>workflow.checkWriteTargets([request],data),error=>error.status===403);
+ }
+ assert.equal(f.writes.length,0);
+});
