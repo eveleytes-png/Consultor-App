@@ -71,7 +71,7 @@ test('La conciliación cuenta altas y bajas sin exponer comercios ni borrar pend
  x.setImported([headers]);
  await x.service.preview(owner,now);
  assert.equal(x.store.state.pendingChanges.length,2);
- assert.match(x.store.state.portfolioReviewError,/No pudimos verificar/);
+ assert.match(x.store.state.portfolioReviewError,/vacía o solo tiene encabezados/);
 });
 test('Correo: código, caducidad lógica, límite de intentos y cambio de dirección',async()=>{
  const x=setup();x.store.state.emailVerified=false;await x.service.sendCode('owner@example.com');

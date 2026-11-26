@@ -2,7 +2,6 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
 import {NotificationService} from '../lib/notification-service.mjs';
-import {sheetDigest} from '../lib/portfolio-changes.mjs';
 
 const headers=['Mail','Comentarios','Nombre del comercio','Aceptación','Encuesta valida','Blindaje',...Array(9).fill(''),'Cust_id comercio','Dato calculado','Dato fijo'];
 const merchant=(id,email='m'+id+'@example.com')=>[email,'','Comercio '+id,'Si','No','',...Array(9).fill(''),id,'Calculado '+id,'No copiar'];
@@ -14,7 +13,6 @@ const tab=(sheetId,title)=>({sheetId,title,gridProperties:{rowCount:100,columnCo
 function setup(){
  let imported=[headers,merchant('1'),merchant('2')];
  let active=[headers,merchant('1'),merchant('2')],archive=null,lockOwner=null,loseResponse=false,archiveRows=[],afterGrid=null,rejectWrite=false;
- let importMarker=sheetDigest(imported);
  const state={},snapshots=new Map(),writes=[],markers=[];
  const store={
   read:async()=>({state:structuredClone(state)}),
@@ -32,9 +30,7 @@ function setup(){
   }
  };
  const google=async(_,path,body)=>{
-  if(path.startsWith('?fields'))return {sheets:[tab(activeId,'Base Consultor App'),tab(7,'Base importada'),...(archive?[archive]:[])].map(properties=>({
-   properties,developerMetadata:properties.sheetId===7&&importMarker?[{metadataKey:'consultorCompleteImportSha256',metadataValue:importMarker,location:{sheetId:7}}]:[]
-  }))};
+  if(path.startsWith('?fields'))return {sheets:[tab(activeId,'Base Consultor App'),tab(7,'Base importada'),...(archive?[archive]:[])].map(properties=>({properties}))};
   if(path.startsWith('?ranges=')){
    const scope=decodeURIComponent(path),archived=scope.includes('ComerciosEliminados'),source=scope.includes('Base importada');
    const title=archived?'ComerciosEliminados':source?'Base importada':'Base Consultor App';
@@ -78,7 +74,7 @@ function setup(){
  };
  const env={PORTFOLIO_WRITES_ENABLED:'true'};
  const service=new NotificationService({env,google,store,portfolioLock:lock});
- return {service,state,writes,snapshots,archiveRows,setImported:(rows,completed=true)=>{imported=[headers,...rows];if(completed)importMarker=sheetDigest(imported);},setCell:(row,col,value)=>{active[row][col]=value;},loseResponse:()=>{loseResponse=true;},rejectWrite:()=>{rejectWrite=true;},editAfterGrid:edit=>{afterGrid=edit;}};
+ return {service,state,writes,snapshots,archiveRows,setImported:rows=>{imported=[headers,...rows];},setRawImport:rows=>{imported=rows;},setActive:rows=>{active=[headers,...rows];},setCell:(row,col,value)=>{active[row][col]=value;},loseResponse:()=>{loseResponse=true;},rejectWrite:()=>{rejectWrite=true;},editAfterGrid:edit=>{afterGrid=edit;}};
 }
 
 test('El enlace conserva los pendientes y el servidor aplica únicamente la selección confirmada',async()=>{
@@ -117,12 +113,14 @@ test('El enlace conserva los pendientes y el servidor aplica únicamente la sele
  assert.equal(f.writes.length,2);
 });
 
-test('Una importación parcial con un marcador anterior bloquea la baja aunque exista respaldo',async()=>{
+test('Una fuente con columnas vacías concilia y una fuente rota bloquea cualquier escritura',async()=>{
  const f=setup();
  await f.service.reviewChanges(owner);
- f.setImported([merchant('2')],false);
+ f.setImported([merchant('2').map((value,i)=>[0,15].includes(i)?value:'')]);
  await f.service.reviewChanges(owner);
- assert.match((await f.service.workflow.apply(owner,'remove',['id:1']))[0].error,/importación terminó/);
+ f.setImported([merchant('#REF!')]);
+ assert.match((await f.service.workflow.apply(owner,'remove',['id:1']))[0].error,/errores de fórmula/);
+ await f.service.reviewChanges(owner); assert.match(f.state.portfolioReviewError,/errores de fórmula/);
  assert.equal(f.writes.length,0);
  assert.equal(f.state.pendingChanges.length,1);
 });
@@ -149,8 +147,7 @@ test('Una baja archiva directamente aunque no exista un respaldo y la fuente vac
  assert.equal((await f.service.workflow.apply(owner,'remove',['id:1']))[0].applied,true);
  assert.equal(f.archiveRows[1][3].effectiveValue.stringValue,'Comercio 1');
  f.setImported([]);
- await f.service.reviewChanges(owner);
- assert.ok(f.state.portfolioReviewError);
+ await f.service.reviewChanges(owner); assert.match(f.state.portfolioReviewError,/vacía o solo tiene encabezados/);
  assert.equal((await f.service.workflow.apply(owner,'remove',['id:1']))[0].applied,false);
  assert.equal(f.writes.length,1);
 });
@@ -207,4 +204,36 @@ test('Registrar requiere una sesión y nunca permite escribir Base importada',as
  assert.equal(f.writes.length,0);
 });
 
+test('Una carga válida admite 60 altas juntas con columnas opcionales vacías',async()=>{
+ const f=setup();
+ const newRows=Array.from({length:60},(_,i)=>merchant(String(i+3)).map((value,col)=>[0,15].includes(col)?value:''));
+ f.setImported([merchant('1'),merchant('2'),...newRows]);
+ await f.service.reviewChanges(owner);
+ assert.equal(f.state.pendingChanges.length,60);
+ assert.ok(f.state.pendingChanges.every(c=>c.kind==='add'&&c.applicable));
+ assert.equal(f.writes.length,0);
+});
 
+test('Una reducción legítima de 81 sellers a uno admite 80 bajas juntas',async()=>{
+ const f=setup();
+ f.setActive(Array.from({length:81},(_,i)=>merchant(String(i+1))));
+ f.setImported([merchant('1')]);
+ await f.service.reviewChanges(owner);
+ assert.equal(f.state.pendingChanges.length,80);
+ assert.ok(f.state.pendingChanges.every(c=>c.kind==='remove'&&c.applicable));
+ assert.equal(f.writes.length,0);
+});
+
+test('Una fuente totalmente vacía o con filas sin identidad no modifica los pendientes',async()=>{
+ const f=setup();
+ f.setImported([merchant('2')]);
+ await f.service.reviewChanges(owner);
+ const previous=structuredClone(f.state.pendingChanges);
+ for(const [rows,reason] of [[[],/vacía/],[[headers,['','','Comercio sin identidad']],/sin ID ni email válido/]]){
+  f.setRawImport(rows);
+  try{await f.service.reviewChanges(owner);}catch(error){assert.match(error.message,reason);}
+  assert.match(f.state.portfolioReviewError,reason);
+  assert.deepEqual(f.state.pendingChanges,previous);
+  assert.equal(f.writes.length,0);
+ }
+});

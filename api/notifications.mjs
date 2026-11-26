@@ -37,7 +37,7 @@ export function createNotificationHandler({env=process.env,service=new Notificat
     default:return res.status(400).json({error:'Operación no permitida.'});
    }
    return res.status(200).json(await service.status(owner,privateSession));
-  }catch(e){return res.status(e.status||503).json({error:e.status?e.message:'No se pudo completar la operación. Revisá la configuración del servidor.'});}
+  }catch(e){return res.status(e.status||503).json({error:e.status?e.message:'No se pudo completar la operación. Revisá la configuración del servidor.',...(e.importValidation?{importValidation:true}:{})});}
  };
 }
 export default createNotificationHandler();

@@ -50,7 +50,8 @@
    const removals=items('remove').length,additions=items('add').length;
    if(!state.canReview)return panel('Ingresá para revisar los cambios','Accedé con tu cuenta autorizada de Google.')+footer(button('Ingresar con Google','login','primary'));
    const reconcile=button(!state.reviewError&&(removals||additions)?'Actualizar datos':'Realizar una conciliación ahora','reconcile',removals||additions?'secondary':'primary');
-   if(state.reviewError)return panel('No se pudieron conciliar las planillas',escapeHtml(state.reviewError))+footer(reconcile);
+   if(state.reviewError)return panel('Conciliación bloqueada',escapeHtml(state.reviewError),
+    '<p class="planilla-description">Mientras la conciliación esté bloqueada, no se aplicarán cambios. Revisá Base importada y volvé a conciliar cuando los datos se hayan actualizado correctamente.</p>')+footer(reconcile);
    if(!removals&&!additions){
     return state.reviewReady?
      panel('Las planillas están conciliadas','No hay comercios para agregar ni eliminar de Base Consultor App.')+footer(reconcile):
@@ -120,7 +121,10 @@
     stage='intro';for(const kind of order)selected[kind].clear();
     paint(next);render();updateGlobal(next);
     result.textContent=next.reviewError?'':order.some(kind=>items(kind).length)?'Encontramos cambios para revisar.':'No encontramos cambios para registrar.';
-   }catch(error){result.textContent=error.message;}
+   }catch(error){
+    if(error.importValidation){stage='intro';paint({...state,reviewError:error.message});render();result.textContent='';}
+    else result.textContent=error.message;
+   }
    finally{reviewBusy=false;body.inert=false;}
   }
   let registrationTitle='Registro finalizado';
@@ -132,6 +136,7 @@
     for(const kind of order){
      for(const change of approved[kind]){
       next=await call('applyPortfolioChanges',{kind,ids:[change.id],...(kind==='remove'?{confirmedAt}:{})});
+      if(next.reviewError)return;
       const outcome=next.results?.find(item=>item.id===change.id);
       if(outcome?.applied){total++;selected[kind].delete(change.id);}
       else errors.push(change.name+': '+(outcome?.error||'No se pudo verificar el registro.'));
@@ -140,8 +145,8 @@
    }catch(error){errors.push(error.message);}
    finally{
     registrationTitle=errors.length?(total?'Registro parcial':'No se registraron cambios'):'Registro finalizado';
-    reviewBusy=false;body.inert=false;stage='done';paint(next);render();updateGlobal(next);
-    result.textContent=(total===1?'1 cambio registrado.':total+' cambios registrados.')+(errors.length?' '+errors.join(' '):'');
+    reviewBusy=false;body.inert=false;stage=next.reviewError?'intro':'done';paint(next);render();updateGlobal(next);
+    result.textContent=next.reviewError&&!total?'':(total===1?'1 cambio registrado.':total+' cambios registrados.')+(errors.length?' '+errors.join(' '):'');
    }
   }
   body.onchange=event=>{
@@ -196,7 +201,7 @@
  }
  async function call(operation,data={}){
   const r=await fetch('/api/notifications',{method:operation?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:operation?JSON.stringify({operation,...data}):undefined,signal:AbortSignal.timeout(30000)});
-  const value=await r.json();if(!r.ok)throw Object.assign(Error(value.error||'No se pudieron consultar las notificaciones.'),{status:r.status});return value;
+  const value=await r.json();if(!r.ok)throw Object.assign(Error(value.error||'No se pudieron consultar las notificaciones.'),{status:r.status,importValidation:value.importValidation});return value;
  }
  function mount(){
   const section=document.createElement('section');section.className='settings-section';section.id='daily-notifications';
