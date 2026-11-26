@@ -5,6 +5,7 @@
  const actionIcons={
   'data-routes':'<path d="M6 5h10a3 3 0 0 1 0 6H8a3 3 0 0 0 0 6h10M6 2v6m-3-3h6m9 9 3 3-3 3"/>',
   'data-excel':icons.download,
+  'data-reconcile-sellers':'<path d="M4 8h15l-4-4m5 12H5l4 4"/>',
   'data-backup-baseapp':'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/>'
  };
  function bobbinHint(result){

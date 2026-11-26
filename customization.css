@@ -123,3 +123,10 @@ body:not(.connection-checked) main>*{display:none}body:not(.connection-checked) 
  .portfolio-reconciliation-dialog .portfolio-counts>div{padding:12px}
  .portfolio-reconciliation-dialog .form-footer button{font-size:14px;padding-inline:12px}
 }
+
+/* Shared outcome notices for all screens and modal actions. */
+.toast[data-operation-notice]{position:fixed;inset:auto auto max(24px,calc(env(safe-area-inset-bottom) + 12px)) 50%;transform:translateX(-50%);width:max-content;max-width:min(420px,calc(100vw - 32px));max-height:min(35vh,220px);box-sizing:border-box;padding:10px 14px;border:1px solid #e8cb32;border-radius:12px;background:#fff5b8;color:#252009;box-shadow:0 6px 24px #25253626;font-size:14px;line-height:1.4;pointer-events:none;white-space:pre-line}
+.toast[data-operation-notice] strong{display:block;font-weight:700;margin-block-end:2px}
+.portfolio-reconciliation-dialog .portfolio-reconciliation-empty{align-items:center;justify-content:center;text-align:center;gap:12px}
+.portfolio-reconciliation-empty>span{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:#fff5b8;color:#695700;font-size:28px}
+.portfolio-reconciliation-empty h3,.portfolio-reconciliation-empty p{margin:0}

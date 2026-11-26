@@ -2,24 +2,38 @@
 (()=>{
  const original=profileConfiguration;
  profileConfiguration=function(){original();mount();};
- let generation=0,renderReview=null,reviewBusy=false,workflowOpened=false;
+ let generation=0,renderReview=null,reviewBusy=false,workflowOpened=false,reviewRequest=null;
  const reviewRoute=()=>new URL(location.href).searchParams.get('notificaciones')==='cambios';
  function updateGlobal(s){
-  document.dispatchEvent(new CustomEvent('consultor-notifications-state',{detail:s}));
   if(!reviewRoute())return;
   if(!workflowOpened){workflowOpened=true;mountWorkflow(s);}
   else if(!reviewBusy)renderReview?.(s);
  }
- async function refreshReview(){
-  if(!reviewRoute())return;
-  try{updateGlobal(await call());}
-  catch(error){if(error.status===401)updateGlobal({canReview:false,changes:[]});}
+ function openReview(operation){
+  if(!reviewRoute()||reviewRequest||(!operation&&workflowOpened))return;
+  if(operation)showOpNotice('Comparando Base importada con Base Consultor App.');
+  reviewRequest=call(operation).then(state=>{
+   if(!reviewRoute())return;
+   updateGlobal(state);
+   if(operation)document.querySelector('[data-operation-notice]')?.remove();
+  }).catch(error=>{
+   if(!reviewRoute())return;
+   if(error.status===401)updateGlobal({canReview:false,changes:[]});
+   else if(error.importValidation)updateGlobal({canReview:true,changes:[],reviewError:error.message});
+   showOpNotice(error.message,{title:'No se completó la conciliación',error:true});
+  }).finally(()=>{reviewRequest=null;});
  }
- window.addEventListener('focus',refreshReview);
- window.addEventListener('popstate',refreshReview);
- document.addEventListener('consultor-navigation',refreshReview);
- document.addEventListener('consultor-session-ready',refreshReview);
- refreshReview();
+ const openLinkedReview=()=>openReview();
+ window.addEventListener('popstate',openLinkedReview);
+ document.addEventListener('consultor-navigation',openLinkedReview);
+ document.addEventListener('consultor-session-ready',()=>{if(workflowOpened&&reviewRoute()&&renderReview){call().then(updateGlobal).catch(()=>{});}else openLinkedReview();});
+ document.addEventListener('click',event=>{
+  if(page!=='sellers'||!event.target.closest('[data-reconcile-sellers]')||reviewRequest)return;
+  const url=new URL(location.href);url.searchParams.set('notificaciones','cambios');
+  history.replaceState(history.state,'',url);
+  openReview('review');
+ });
+ openLinkedReview();
  function mountWorkflow(initial){
   if(page!=='sellers'){
    const url=new URL(location.href);url.searchParams.set('pantalla','sellers');
@@ -27,9 +41,9 @@
    return;
   }
   const dialog=opDialog('Registrar modificación cartera',
-   '<div class="planilla-body" id="portfolio-review"></div><p class="planilla-description" role="status" data-results></p>',true);
+   '<div class="planilla-body" id="portfolio-review"></div>',true);
   dialog.classList.add('planilla-dialog','portfolio-reconciliation-dialog');
-  const body=dialog.querySelector('#portfolio-review'),result=dialog.querySelector('[data-results]');
+  const body=dialog.querySelector('#portfolio-review');
   const order=['remove','add'],labels={remove:'Eliminar sellers',add:'Agregar sellers',finish:'Revisar y registrar'};
   const selected={add:new Set(),remove:new Set()};
   let state=initial,stage='intro',authenticating=false,lastFingerprint='';
@@ -49,17 +63,17 @@
   function intro(){
    const removals=items('remove').length,additions=items('add').length;
    if(!state.canReview)return panel('Ingresá para revisar los cambios','Accedé con tu cuenta autorizada de Google.')+footer(button('Ingresar con Google','login','primary'));
-   const reconcile=button(!state.reviewError&&(removals||additions)?'Actualizar datos':'Realizar una conciliación ahora','reconcile',removals||additions?'secondary':'primary');
+   const close='<button type="button" class="secondary" data-modal-close>Cerrar</button>';
    if(state.reviewError)return panel('Conciliación bloqueada',escapeHtml(state.reviewError),
-    '<p class="planilla-description">Mientras la conciliación esté bloqueada, no se aplicarán cambios. Revisá Base importada y volvé a conciliar cuando los datos se hayan actualizado correctamente.</p>')+footer(reconcile);
+    '<p class="planilla-description">Revisá Base importada y usá «Conciliar sellers» en Mi cartera para volver a intentar.</p>')+footer(close);
    if(!removals&&!additions){
     return state.reviewReady?
-     panel('Las planillas están conciliadas','No hay comercios para agregar ni eliminar de Base Consultor App.')+footer(reconcile):
-     panel('Conciliá las planillas','Compará Base importada con Base Consultor App para saber si hay cambios pendientes.')+footer(reconcile);
+     '<section class="planilla-content portfolio-reconciliation-empty"><span aria-hidden="true">✓</span><h3>Las planillas están conciliadas</h3><p class="planilla-description">No hay comercios para agregar ni eliminar de Base Consultor App.</p></section>'+footer(close):
+     panel('Conciliá las planillas','Usá «Conciliar sellers» en Mi cartera para buscar cambios pendientes.')+footer(close);
    }
    const count=(kind,label,value)=>'<div class="portfolio-count-'+kind+'"><dt>'+label+'</dt><dd>'+value+' <span>'+ (value===1?'seller':'sellers')+'</span></dd></div>';
    const counts='<dl class="planilla-review portfolio-counts">'+count('remove','Para eliminar',removals)+count('add','Para agregar',additions)+'</dl>';
-   return progress()+panel('Hay cambios pendientes','Revisá las diferencias entre tu Base importada y la Base Consultor App antes de continuar.',counts)+footer(reconcile,button('Comenzar conciliación <span aria-hidden="true">→</span>','start','primary'));
+   return progress()+panel('Hay cambios pendientes','Revisá las diferencias entre tu Base importada y la Base Consultor App antes de continuar.',counts)+footer(close,button('Comenzar conciliación <span aria-hidden="true">→</span>','start','primary'));
   }
   function selectStep(){
    const changes=items(stage),chosen=selected[stage];
@@ -97,14 +111,15 @@
   }
   function render(){
    if(!dialog.open)return;
-   if(stage!=='intro'&&stage!=='done'&&(!state.canReview||state.reviewError||steps().length===1))stage='intro';
+   if(stage!=='intro'&&(!state.canReview||state.reviewError||steps().length===1))stage='intro';
    if(order.includes(stage)&&!items(stage).length)stage='intro';
-   body.innerHTML=stage==='intro'?intro():stage==='finish'?finish():stage==='done'?
-    panel(registrationTitle,'Podés volver a revisar los cambios que quedaron pendientes.')+footer(button('Volver al inicio','home'),'<button type="button" class="primary" data-modal-close>Cerrar</button>'):selectStep();
+   const overdue=stage==='intro'&&state.canReview&&['missed','failed'].includes(state.automaticStatus)?
+    '<p class="planilla-description" role="status">La conciliación programada de hoy no se completó. Podés realizarla ahora.</p>':'';
+   body.innerHTML=stage==='intro'?overdue+intro():stage==='finish'?finish():selectStep();
    syncSelection();
   }
   function paint(next){
-   const fingerprint=JSON.stringify([next.canReview,next.writesEnabled,next.reviewReady,next.reviewError,next.changes]);
+   const fingerprint=JSON.stringify([next.canReview,next.writesEnabled,next.reviewReady,next.reviewError,next.automaticStatus,next.changes]);
    state=next;
    if(fingerprint===lastFingerprint)return;
    lastFingerprint=fingerprint;
@@ -114,39 +129,29 @@
    }
    render();
   }
-  async function reconcile(){
-   reviewBusy=true;body.inert=true;result.textContent='Conciliando las planillas…';
-   try{
-    const next=await call('review');
-    stage='intro';for(const kind of order)selected[kind].clear();
-    paint(next);render();updateGlobal(next);
-    result.textContent=next.reviewError?'':order.some(kind=>items(kind).length)?'Encontramos cambios para revisar.':'No encontramos cambios para registrar.';
-   }catch(error){
-    if(error.importValidation){stage='intro';paint({...state,reviewError:error.message});render();result.textContent='';}
-    else result.textContent=error.message;
-   }
-   finally{reviewBusy=false;body.inert=false;}
-  }
-  let registrationTitle='Registro finalizado';
   async function apply(approved,confirmedAt){
-   reviewBusy=true;body.inert=true;result.textContent='Registrando los cambios seleccionados…';
-   let total=0,next=state;
+   reviewBusy=true;body.inert=true;
+   body.innerHTML='<section class="planilla-content portfolio-reconciliation-empty" role="status"><h3>Registrando cambios…</h3></section>';
+   let next=state;
+   const counts={add:0,remove:0};
    const errors=[];
    try{
     for(const kind of order){
      for(const change of approved[kind]){
       next=await call('applyPortfolioChanges',{kind,ids:[change.id],...(kind==='remove'?{confirmedAt}:{})});
-      if(next.reviewError)return;
+      if(next.reviewError){errors.push(next.reviewError);return;}
       const outcome=next.results?.find(item=>item.id===change.id);
-      if(outcome?.applied){total++;selected[kind].delete(change.id);}
+      if(outcome?.applied){counts[kind]++;selected[kind].delete(change.id);}
       else errors.push(change.name+': '+(outcome?.error||'No se pudo verificar el registro.'));
      }
     }
    }catch(error){errors.push(error.message);}
    finally{
-    registrationTitle=errors.length?(total?'Registro parcial':'No se registraron cambios'):'Registro finalizado';
-    reviewBusy=false;body.inert=false;stage=next.reviewError?'intro':'done';paint(next);render();updateGlobal(next);
-    result.textContent=next.reviewError&&!total?'':(total===1?'1 cambio registrado.':total+' cambios registrados.')+(errors.length?' '+errors.join(' '):'');
+    reviewBusy=false;body.inert=false;dialog.close();
+    const summary=[];
+    if(counts.add)summary.push(counts.add===1?'Se agregó 1 comercio.':'Se agregaron '+counts.add+' comercios.');
+    if(counts.remove)summary.push(counts.remove===1?'Se eliminó 1 comercio.':'Se eliminaron '+counts.remove+' comercios.');
+    showOpNotice([...summary,...errors].join(' '),{title:errors.length?'No se completó la conciliación':'Registro finalizado',error:!!errors.length});
    }
   }
   body.onchange=event=>{
@@ -158,9 +163,8 @@
   body.onclick=event=>{
    const action=event.target.closest('[data-wizard]')?.dataset.wizard;
    if(!action||reviewBusy)return;
-   if(action==='reconcile'){reconcile();return;}
    if(action==='login'){authenticating=true;window.SheetsApp?.openServerLogin();return;}
-   if(action==='start'||action==='home'){stage=action==='home'?'intro':steps()[0];result.textContent='';}
+   if(action==='start')stage=steps()[0];
    if(action==='next'||action==='back'){
     const visible=steps(),i=visible.indexOf(stage);
     stage=visible[i+(action==='next'?1:-1)]||'intro';

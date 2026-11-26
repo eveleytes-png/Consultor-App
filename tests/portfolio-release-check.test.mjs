@@ -80,11 +80,11 @@ function setup(){
 test('El enlace conserva los pendientes y el servidor aplica únicamente la selección confirmada',async()=>{
  const f=setup(),workflow=f.service.workflow;
  await f.service.reviewChanges(owner);
- assert.equal(Object.keys(f.state.portfolioSnapshots).length,2);
- assert.deepEqual(f.state.portfolioSnapshots['id:1'].values[2],{stringValue:'Comercio 1'});
- assert.equal(f.state.portfolioSnapshots['id:1'].linked[2],true);
- assert.deepEqual(f.state.portfolioSnapshots['id:1'].values[17],{stringValue:'No copiar'});
- assert.equal(f.state.portfolioSnapshots['id:1'].linked[17],false);
+ assert.equal(f.snapshots.size,2);
+ assert.deepEqual(f.snapshots.get('id:1').values[2],{stringValue:'Comercio 1'});
+ assert.equal(f.snapshots.get('id:1').linked[2],true);
+ assert.deepEqual(f.snapshots.get('id:1').values[17],{stringValue:'No copiar'});
+ assert.equal(f.snapshots.get('id:1').linked[17],false);
  f.setImported([merchant('2'),merchant('3'),merchant('4')]);
  f.setCell(1,2,'');
  f.setCell(1,5,'Último dato manual');
@@ -120,7 +120,7 @@ test('Una fuente con columnas vacías concilia y una fuente rota bloquea cualqui
  await f.service.reviewChanges(owner);
  f.setImported([merchant('#REF!')]);
  assert.match((await f.service.workflow.apply(owner,'remove',['id:1']))[0].error,/errores de fórmula/);
- await f.service.reviewChanges(owner); assert.match(f.state.portfolioReviewError,/errores de fórmula/);
+ await assert.rejects(()=>f.service.reviewChanges(owner),/errores de fórmula/);
  assert.equal(f.writes.length,0);
  assert.equal(f.state.pendingChanges.length,1);
 });
@@ -147,7 +147,7 @@ test('Una baja archiva directamente aunque no exista un respaldo y la fuente vac
  assert.equal((await f.service.workflow.apply(owner,'remove',['id:1']))[0].applied,true);
  assert.equal(f.archiveRows[1][3].effectiveValue.stringValue,'Comercio 1');
  f.setImported([]);
- await f.service.reviewChanges(owner); assert.match(f.state.portfolioReviewError,/vacía o solo tiene encabezados/);
+ await assert.rejects(()=>f.service.reviewChanges(owner),/vacía o solo tiene encabezados/);
  assert.equal((await f.service.workflow.apply(owner,'remove',['id:1']))[0].applied,false);
  assert.equal(f.writes.length,1);
 });

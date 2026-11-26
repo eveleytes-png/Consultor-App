@@ -10,7 +10,7 @@ export function createNotificationHandler({env=process.env,service=new Notificat
    if(req.query?.run==='daily'){
     if(req.method!=='POST'||!safeEqual(req.headers.authorization,'Bearer '+(env.NOTIFICATION_CRON_SECRET||''))||!env.NOTIFICATION_CRON_SECRET)return res.status(403).json({error:'Acceso denegado.'});
     singleConsultant(env);
-    try{return res.status(200).json(await service.run());}
+    try{return res.status(200).json(await service.run(b?.scheduleVersion));}
     catch(e){await service.store.update(singleConsultant(env),s=>{s.lastError='No se pudo generar el resumen. Revisá la fuente, agenda y configuración del servidor.';});throw e;}
    }
    const owner=requireConsultant(req,env);
@@ -23,7 +23,6 @@ export function createNotificationHandler({env=process.env,service=new Notificat
     case 'verifyEmail':await service.verifyCode(owner,b.code);break;
     case 'telegramLink':case 'confirmTelegram':return res.status(410).json({error:'Solo se permiten notificaciones por email.'});
     case 'unlinkTelegram':await service.store.update(owner,s=>{delete s.telegramChat;delete s.pendingChat;if(s.challenges)delete s.challenges.telegram;for(const job of Object.values(s.jobs||{}))if(job.channel==='telegram'&&['pending','retry'].includes(job.status))job.status='skipped';});break;
-    case 'refresh':await service.refreshSource(owner);break;
     case 'review':
      if(!privateSession)return res.status(401).json({error:'Ingresá con tu cuenta de Google para revisar cambios.'});
      await service.reviewChanges(owner);break;

@@ -52,7 +52,7 @@ test('HTML seguro, enlaces originales, agenda nocturna y máximo cinco actividad
  const {html,text}=composeDailyEmail(summary,'https://example.com');
  assert(html.includes('&lt;img'));assert(!html.includes('<img'));assert(text.includes(description));
  assert(html.includes('Agenda de mañana'));assert(html.includes('Y 2 más'));assert(text.includes('2 comercios para agregar y 3 para eliminar'));
- for(const q of ['?pantalla=usuario&amp;notificaciones=cambios','?pantalla=sellers&amp;cartera=sin-aceptacion','?pantalla=agenda'])assert(html.includes(q));
+ for(const q of ['?pantalla=sellers&amp;notificaciones=cambios','?pantalla=sellers&amp;cartera=sin-aceptacion','?pantalla=agenda'])assert(html.includes(q));
  assert.throws(()=>composeDailyEmail(summary,'https://user:secret@example.com'));
 });
 
