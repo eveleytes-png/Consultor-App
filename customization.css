@@ -100,3 +100,26 @@ body:not(.connection-checked) main>*{display:none}body:not(.connection-checked) 
 .live-seller>.seller-additional,.cartera-view #seller-results .live-seller>.seller-additional,.configured-detail .detail-summary-card>.seller-additional,.map-selected-card .live-seller>.seller-additional{display:block;min-width:0;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .settings-example-card>p{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .cartera-view .live-seller>.cartera-meta>span{min-width:0;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+
+/* The portfolio reconciliation wizard shares the download dialog layout. */
+.portfolio-reconciliation-dialog .section-head h2{font-weight:500}
+.portfolio-reconciliation-dialog .planilla-steps{padding-bottom:24px}
+.portfolio-reconciliation-dialog .planilla-steps li{gap:8px}
+.portfolio-reconciliation-dialog .planilla-steps strong{margin-top:6px}
+.portfolio-reconciliation-dialog .planilla-steps .is-current,
+.portfolio-reconciliation-dialog .planilla-steps .is-complete{color:var(--ink,#191c2a)}
+.portfolio-reconciliation-dialog .planilla-steps .is-current .planilla-step-number{color:var(--ink,#191c2a);background:var(--yellow,#ffe600);border-color:var(--yellow,#ffe600);box-shadow:0 0 0 7px #fff3a6}
+.portfolio-reconciliation-dialog .planilla-steps .is-complete .planilla-step-number{color:var(--ink,#191c2a);background:#fff8ca;border-color:#ffe600}
+.portfolio-reconciliation-dialog .portfolio-counts{margin-top:26px;gap:20px}
+.portfolio-reconciliation-dialog .portfolio-counts>div{padding:24px;border-left-width:3px}
+.portfolio-reconciliation-dialog .portfolio-count-remove{border-left-color:#d99385}
+.portfolio-reconciliation-dialog .portfolio-count-add{border-left-color:#76ad8b}
+.portfolio-reconciliation-dialog .portfolio-counts dd span{font-size:14px;font-weight:400;color:#6f7080}
+.portfolio-reconciliation-dialog [data-wizard="start"] span{margin-inline-start:8px}
+@media(max-width:600px){
+ .portfolio-reconciliation-dialog .planilla-steps{padding-bottom:16px}
+ .portfolio-reconciliation-dialog .planilla-steps strong{text-align:center;font-size:13px}
+ .portfolio-reconciliation-dialog .portfolio-counts{gap:10px;margin-top:16px}
+ .portfolio-reconciliation-dialog .portfolio-counts>div{padding:12px}
+ .portfolio-reconciliation-dialog .form-footer button{font-size:14px;padding-inline:12px}
+}

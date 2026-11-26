@@ -28,7 +28,7 @@
   }
   const dialog=opDialog('Registrar modificación cartera',
    '<div class="planilla-body" id="portfolio-review"></div><p class="planilla-description" role="status" data-results></p>',true);
-  dialog.classList.add('planilla-dialog');
+  dialog.classList.add('planilla-dialog','portfolio-reconciliation-dialog');
   const body=dialog.querySelector('#portfolio-review'),result=dialog.querySelector('[data-results]');
   const order=['remove','add'],labels={remove:'Eliminar sellers',add:'Agregar sellers',finish:'Revisar y registrar'};
   const selected={add:new Set(),remove:new Set()};
@@ -41,23 +41,24 @@
   const footer=(...buttons)=>'<div class="form-footer">'+buttons.join('')+'</div>';
   const panel=(title,description,content='')=>'<section class="planilla-content"><h3>'+title+'</h3><p class="planilla-description">'+description+'</p>'+content+'</section>';
   function progress(){
-   const visible=steps(),index=visible.indexOf(stage);
-   return '<nav class="planilla-steps" aria-label="Progreso del registro"><ol>'+visible.map((step,i)=>
+   const visible=['Cambios','Actualizar datos','Conciliación'],index=stage==='intro'?0:stage==='finish'?2:1;
+   return '<nav class="planilla-steps" aria-label="Progreso de conciliación"><ol>'+visible.map((label,i)=>
     '<li class="'+(i===index?'is-current':i<index?'is-complete':'')+'"'+(i===index?' aria-current="step"':'')+'><span class="planilla-step-number" aria-hidden="true">'+
-    (i<index?'✓':i+1)+'</span><strong>'+labels[step]+'</strong><small>'+(i===index?'En curso':i<index?'Completado':i===index+1?'Siguiente':'Pendiente')+'</small></li>').join('')+'</ol></nav>';
+    (i<index?'✓':i+1)+'</span><strong>'+label+'</strong><small>'+(i===index?'En curso':i<index?'Completado':'Pendiente')+'</small></li>').join('')+'</ol></nav>';
   }
   function intro(){
    const removals=items('remove').length,additions=items('add').length;
    if(!state.canReview)return panel('Ingresá para revisar los cambios','Accedé con tu cuenta autorizada de Google.')+footer(button('Ingresar con Google','login','primary'));
-   const reconcile=button('Realizar una conciliación ahora','reconcile',removals||additions?'secondary':'primary');
+   const reconcile=button(!state.reviewError&&(removals||additions)?'Actualizar datos':'Realizar una conciliación ahora','reconcile',removals||additions?'secondary':'primary');
    if(state.reviewError)return panel('No se pudieron conciliar las planillas',escapeHtml(state.reviewError))+footer(reconcile);
    if(!removals&&!additions){
     return state.reviewReady?
      panel('Las planillas están conciliadas','No hay comercios para agregar ni eliminar de Base Consultor App.')+footer(reconcile):
      panel('Conciliá las planillas','Compará Base importada con Base Consultor App para saber si hay cambios pendientes.')+footer(reconcile);
    }
-   const counts='<dl class="planilla-review"><div><dt>Para eliminar</dt><dd>'+removals+'</dd></div><div><dt>Para agregar</dt><dd>'+additions+'</dd></div></dl>';
-   return panel('Hay cambios pendientes','Revisá las diferencias entre Base importada y Base Consultor App.',counts)+footer(reconcile,button('Comenzar','start','primary'));
+   const count=(kind,label,value)=>'<div class="portfolio-count-'+kind+'"><dt>'+label+'</dt><dd>'+value+' <span>'+ (value===1?'seller':'sellers')+'</span></dd></div>';
+   const counts='<dl class="planilla-review portfolio-counts">'+count('remove','Para eliminar',removals)+count('add','Para agregar',additions)+'</dl>';
+   return progress()+panel('Hay cambios pendientes','Revisá las diferencias entre tu Base importada y la Base Consultor App antes de continuar.',counts)+footer(reconcile,button('Comenzar conciliación <span aria-hidden="true">→</span>','start','primary'));
   }
   function selectStep(){
    const changes=items(stage),chosen=selected[stage];
@@ -98,7 +99,7 @@
    if(stage!=='intro'&&stage!=='done'&&(!state.canReview||state.reviewError||steps().length===1))stage='intro';
    if(order.includes(stage)&&!items(stage).length)stage='intro';
    body.innerHTML=stage==='intro'?intro():stage==='finish'?finish():stage==='done'?
-    panel('Registro finalizado','Podés volver a revisar los cambios que quedaron pendientes.')+footer(button('Volver al inicio','home'),'<button type="button" class="primary" data-modal-close>Cerrar</button>'):selectStep();
+    panel(registrationTitle,'Podés volver a revisar los cambios que quedaron pendientes.')+footer(button('Volver al inicio','home'),'<button type="button" class="primary" data-modal-close>Cerrar</button>'):selectStep();
    syncSelection();
   }
   function paint(next){
@@ -122,14 +123,15 @@
    }catch(error){result.textContent=error.message;}
    finally{reviewBusy=false;body.inert=false;}
   }
-  async function apply(approved){
+  let registrationTitle='Registro finalizado';
+  async function apply(approved,confirmedAt){
    reviewBusy=true;body.inert=true;result.textContent='Registrando los cambios seleccionados…';
    let total=0,next=state;
    const errors=[];
    try{
     for(const kind of order){
      for(const change of approved[kind]){
-      next=await call('applyPortfolioChanges',{kind,ids:[change.id]});
+      next=await call('applyPortfolioChanges',{kind,ids:[change.id],...(kind==='remove'?{confirmedAt}:{})});
       const outcome=next.results?.find(item=>item.id===change.id);
       if(outcome?.applied){total++;selected[kind].delete(change.id);}
       else errors.push(change.name+': '+(outcome?.error||'No se pudo verificar el registro.'));
@@ -137,6 +139,7 @@
     }
    }catch(error){errors.push(error.message);}
    finally{
+    registrationTitle=errors.length?(total?'Registro parcial':'No se registraron cambios'):'Registro finalizado';
     reviewBusy=false;body.inert=false;stage='done';paint(next);render();updateGlobal(next);
     result.textContent=(total===1?'1 cambio registrado.':total+' cambios registrados.')+(errors.length?' '+errors.join(' '):'');
    }
@@ -171,7 +174,7 @@
     const confirm=opDialog('Confirmar registro',
      '<p>¿Querés registrar '+(count===1?'el cambio seleccionado':'los '+count+' cambios seleccionados')+'?</p>'+
      '<div class="form-footer"><button type="button" class="secondary" data-modal-close>Cancelar</button><button type="button" class="primary" data-confirm>Confirmar</button></div>');
-    confirm.querySelector('[data-confirm]').onclick=()=>{confirm.close();apply(approved);};
+    confirm.querySelector('[data-confirm]').onclick=()=>{const confirmedAt=new Date().toISOString();confirm.close();apply(approved,confirmedAt);};
     return;
    }
    render();

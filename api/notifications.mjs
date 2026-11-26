@@ -29,7 +29,7 @@ export function createNotificationHandler({env=process.env,service=new Notificat
      await service.reviewChanges(owner);break;
     case 'applyPortfolioChanges': {
      if(!privateSession)return res.status(401).json({error:'Ingresá con tu cuenta de Google para confirmar cambios.'});
-     const results=await service.workflow.apply(owner,b.kind,b.ids);
+     const results=await service.workflow.apply(owner,b.kind,b.ids,b.confirmedAt);
      return res.status(200).json({...await service.status(owner,privateSession),results});
     }
     case 'sendTest':return res.status(200).json(await service.sendTest(owner,b.requestId));
